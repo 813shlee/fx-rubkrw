@@ -1,162 +1,319 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FX AI Intelligence</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-  <style>
-    body { margin:0; font-family:Arial, sans-serif; background:#0f172a; color:white; text-align:center; }
-    .container { max-width:1240px; margin:0 auto; padding:24px 28px 60px; }
-    h1 { margin:10px 0 6px; font-size:32px; }
-    .sub { color:#94a3b8; font-size:14px; margin-bottom:10px; }
-    .signal { display:inline-block; padding:11px 20px; background:#1e293b; border-radius:999px; margin:8px 0 20px; font-weight:bold; }
-    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:16px auto 26px; }
-    .card { background:#1e293b; padding:18px 14px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
-    .card h3 { margin:0 0 10px; color:#cbd5e1; font-size:15px; }
-    .value { font-size:24px; font-weight:700; }
-    .unit { margin-top:6px; color:#94a3b8; font-size:13px; }
-    .chart-box { height:560px; background:#111827; border-radius:18px; padding:28px 42px; margin:18px auto 22px; box-sizing:border-box; }
-    .button-row { margin:16px 0 22px; }
-    button { background:#2563eb; border:none; border-radius:10px; color:white; padding:10px 18px; cursor:pointer; font-size:15px; }
-    button:hover { background:#1d4ed8; }
-    .table-wrap { overflow-x:auto; margin-top:20px; }
-    table { width:100%; border-collapse:collapse; background:#111827; border-radius:12px; overflow:hidden; font-size:14px; }
-    th,td { padding:10px 12px; border-bottom:1px solid #334155; text-align:right; white-space:nowrap; }
-    th:first-child, td:first-child { text-align:left; }
-    th { color:#cbd5e1; background:#1e293b; }
-    .buy { color:#34d399; font-weight:700; }
-    .hold { color:#facc15; font-weight:700; }
-    .wait { color:#f87171; font-weight:700; }
-    @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} .chart-box{height:500px; padding:22px 18px;} }
-    @media (max-width:560px){ .container{padding:18px 12px 40px} h1{font-size:25px} .grid{grid-template-columns:1fr} .chart-box{height:440px; padding:18px 10px;} }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FX AI Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  background:#0f172a;
+  color:white;
+  font-family:Arial, sans-serif;
+  margin:0;
+  text-align:center;
+}
+
+.container {
+  max-width:1200px;
+  margin:auto;
+  padding:24px;
+}
+
+h1 { margin-bottom:8px; }
+
+.sub {
+  color:#94a3b8;
+  margin-bottom:14px;
+}
+
+#signal {
+  padding:12px 22px;
+  border-radius:999px;
+  display:inline-block;
+  margin-bottom:18px;
+  font-weight:bold;
+}
+
+.buy { background:#14532d; color:#bbf7d0; }
+.hold { background:#713f12; color:#fde68a; }
+.wait { background:#7f1d1d; color:#fecaca; }
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:18px;
+}
+
+.card {
+  background:#1e293b;
+  padding:18px;
+  border-radius:14px;
+}
+
+.card h3 {
+  color:#94a3b8;
+  margin:0 0 8px;
+  font-size:15px;
+}
+
+.value {
+  font-size:23px;
+  font-weight:bold;
+}
+
+.note {
+  color:#cbd5e1;
+  font-size:13px;
+  margin-top:6px;
+}
+
+.recommend {
+  background:#111827;
+  border-radius:14px;
+  padding:16px;
+  margin:18px 0;
+  font-size:18px;
+  font-weight:bold;
+}
+
+.chart-box {
+  height:520px;
+  background:#111827;
+  border-radius:18px;
+  padding:24px 42px;
+  margin:20px 0;
+}
+
+button {
+  background:#2563eb;
+  color:white;
+  border:none;
+  padding:10px 16px;
+  border-radius:10px;
+  cursor:pointer;
+  margin:12px;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  background:#111827;
+  margin-top:20px;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid #334155;
+}
+
+th { color:#94a3b8; }
+
+@media(max-width:800px){
+  .grid { grid-template-columns:repeat(2,1fr); }
+  .chart-box { height:440px; padding:18px; }
+}
+
+@media(max-width:520px){
+  .grid { grid-template-columns:1fr; }
+}
+</style>
 </head>
+
 <body>
 <div class="container">
-  <h1>FX AI Intelligence System</h1>
-  <div class="sub" id="today">오늘 날짜: -</div>
-  <div class="sub" id="dataDate">데이터 기준일: -</div>
-  <div class="signal" id="signal">Loading...</div>
 
-  <div class="grid">
-    <div class="card"><h3>USD/RUB</h3><div class="value" id="usdRub">-</div><div class="unit">CBR 기준</div></div>
-    <div class="card"><h3>KRW/RUB</h3><div class="value" id="krwRub">-</div><div class="unit">계산 기준, 1 RUB = 원</div></div>
-    <div class="card"><h3>150만원 → RUB</h3><div class="value" id="krwToRub">-</div><div class="unit">KRW → USD → RUB</div></div>
-    <div class="card"><h3>1000 USD → RUB</h3><div class="value" id="usdToRub">-</div><div class="unit">USD → RUB</div></div>
+<h1>FX AI Intelligence System</h1>
+<div class="sub" id="today">Loading...</div>
+
+<div id="signal">Loading...</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>USD/RUB</h3>
+    <div class="value" id="usdRub">-</div>
+    <div class="note">달러 → 루블</div>
   </div>
 
-  <div class="chart-box"><canvas id="chart"></canvas></div>
-  <div class="button-row"><button onclick="manualRefresh()">🔄 최신 데이터 다시 불러오기</button></div>
+  <div class="card">
+    <h3>KRW/RUB</h3>
+    <div class="value" id="krwRub">-</div>
+    <div class="note">1 RUB = 몇 원</div>
+  </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>날짜</th><th>BOK USD/KRW</th><th>CBR USD/RUB</th><th>CALC RUB/KRW</th><th>150만원→RUB</th><th>1000USD→RUB</th><th>점수</th><th>판단</th>
-        </tr>
-      </thead>
-      <tbody id="table"></tbody>
-    </table>
+  <div class="card">
+    <h3>150만원 → RUB</h3>
+    <div class="value" id="krwToRub">-</div>
+    <div class="note" id="krwPeak">-</div>
+  </div>
+
+  <div class="card">
+    <h3>1000 USD → RUB</h3>
+    <div class="value" id="usdToRub">-</div>
+    <div class="note" id="usdPeak">-</div>
   </div>
 </div>
 
+<div class="recommend" id="recommendation">판단 중...</div>
+
+<div class="chart-box">
+  <canvas id="chart"></canvas>
+</div>
+
+<button onclick="location.href='?v=' + Date.now()">🔄 최신 데이터 다시 불러오기</button>
+
+<table>
+<thead>
+<tr>
+  <th>Date</th>
+  <th>USD/RUB</th>
+  <th>KRW/RUB</th>
+  <th>150만원→RUB</th>
+  <th>1000USD→RUB</th>
+  <th>Score</th>
+  <th>Signal</th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
+
+</div>
+
 <script>
-Chart.register(ChartDataLabels);
-
-function fmt(n, digits=2){
-  if (!Number.isFinite(Number(n))) return '-';
-  return Number(n).toLocaleString('ko-KR', {minimumFractionDigits:digits, maximumFractionDigits:digits});
+function fmt(n, d=2){
+  return Number(n).toLocaleString("ko-KR", {
+    minimumFractionDigits:d,
+    maximumFractionDigits:d
+  });
 }
-function intFmt(n){ return Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString('ko-KR') : '-'; }
-function todayText(){ return new Date().toLocaleDateString('ko-KR', {year:'numeric', month:'2-digit', day:'2-digit', weekday:'short'}); }
-function manualRefresh(){ location.href = location.pathname + '?v=' + Date.now(); }
 
-function normalize(row){
-  const cbr = Number(row.cbr_usd_rub ?? row.usd_rub);
-  const bok = Number(row.bok_usd_krw ?? row.usd_krw);
-  let rubKrw = Number(row.calc_rub_krw ?? row.krw_rub);
-  if (!Number.isFinite(rubKrw) && Number.isFinite(bok) && Number.isFinite(cbr)) rubKrw = bok / cbr;
-  return {...row, cbr_usd_rub:cbr, bok_usd_krw:bok, calc_rub_krw:rubKrw};
+function intFmt(n){
+  return Math.round(Number(n)).toLocaleString("ko-KR");
 }
-function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
-function std(arr){ const m=mean(arr); return Math.sqrt(mean(arr.map(x=>(x-m)**2))); }
-function trend(arr){ return arr.length < 2 ? 0 : (arr.at(-1)-arr[0])/arr[0]; }
-function scoreFor(row, series){
-  if (Number.isFinite(Number(row.score))) return Number(row.score);
-  const recent = series.slice(-10);
-  const avg = mean(recent);
-  const vol = std(recent);
-  const t = trend(recent);
-  const dev = (row.calc_rub_krw - avg) / avg;
-  // 낮은 KRW/RUB가 원화 환전에 유리하므로 dev가 낮을수록 점수 상승. USD/RUB 상승 추세도 가점.
-  let score = 60 + (-dev * 900) + (t * -250) - (vol * 1.2);
-  return Math.max(0, Math.min(100, Math.round(score)));
-}
-function signal(score){
-  if (score >= 80) return '🟢 STRONG BUY';
-  if (score >= 65) return '🟢 BUY';
-  if (score >= 50) return '🟡 HOLD';
-  return '🔴 WAIT';
-}
-function signalClass(score){ return score >= 65 ? 'buy' : score >= 50 ? 'hold' : 'wait'; }
 
-async function load(){
-  document.getElementById('today').innerText = '오늘 날짜: ' + todayText();
-  const res = await fetch('rates.json?v=' + Date.now());
-  const raw = await res.json();
-  const data = raw.map(normalize).filter(r => Number.isFinite(r.cbr_usd_rub) && Number.isFinite(r.calc_rub_krw));
-  if (!data.length) throw new Error('rates.json에서 유효한 데이터를 찾지 못했습니다.');
+fetch("rates.json?v=" + Date.now())
+.then(r => r.json())
+.then(data => {
+  const latest = data[data.length - 1];
 
-  const series = data.map(r => r.calc_rub_krw);
-  const scored = data.map(r => ({...r, score: scoreFor(r, series)}));
-  scored.forEach(r => { r.signal = r.signal ?? signal(r.score); });
-  const latest = scored.at(-1);
+  const latestUsdRub = Number(latest.cbr_usd_rub ?? latest.usd_rub);
+  const latestKrwRub = Number(latest.calc_rub_krw ?? latest.krw_rub);
+  const latestKrwToRub = Number(latest.krw_1_5m_to_rub ?? 1500000 / latestKrwRub);
+  const latestUsdToRub = Number(latest.usd_1000_to_rub ?? 1000 * latestUsdRub);
 
-  document.getElementById('dataDate').innerText = '데이터 기준일: ' + latest.date;
-  document.getElementById('usdRub').innerText = fmt(latest.cbr_usd_rub, 2);
-  document.getElementById('krwRub').innerText = fmt(latest.calc_rub_krw, 2);
-  document.getElementById('krwToRub').innerText = intFmt(latest.krw_1_5m_to_rub ?? (1500000 / latest.calc_rub_krw)) + ' RUB';
-  document.getElementById('usdToRub').innerText = intFmt(latest.usd_1000_to_rub ?? (1000 * latest.cbr_usd_rub)) + ' RUB';
-  document.getElementById('signal').innerText = latest.signal + ' | Score: ' + latest.score;
+  document.getElementById("today").innerText = "기준일: " + latest.date;
 
-  new Chart(document.getElementById('chart'), {
-    type:'line',
+  document.getElementById("usdRub").innerText = fmt(latestUsdRub, 2);
+  document.getElementById("krwRub").innerText = fmt(latestKrwRub, 2);
+  document.getElementById("krwToRub").innerText = intFmt(latestKrwToRub) + " RUB";
+  document.getElementById("usdToRub").innerText = intFmt(latestUsdToRub) + " RUB";
+
+  const krwValues = data.map(d => Number(d.krw_1_5m_to_rub ?? 1500000 / (d.calc_rub_krw ?? d.krw_rub)));
+  const usdValues = data.map(d => Number(d.usd_1000_to_rub ?? 1000 * (d.cbr_usd_rub ?? d.usd_rub)));
+
+  const krwHigh = Math.max(...krwValues);
+  const usdHigh = Math.max(...usdValues);
+
+  const krwPct = latestKrwToRub / krwHigh * 100;
+  const usdPct = latestUsdToRub / usdHigh * 100;
+
+  document.getElementById("krwPeak").innerText =
+    "10일 최고 대비 " + fmt(krwPct, 1) + "%";
+
+  document.getElementById("usdPeak").innerText =
+    "10일 최고 대비 " + fmt(usdPct, 1) + "%";
+
+  const signalBox = document.getElementById("signal");
+  const score = Number(latest.score ?? 60);
+  const signal = latest.signal ?? "HOLD";
+
+  signalBox.className = "";
+  if (signal.includes("BUY") || score >= 70) {
+    signalBox.classList.add("buy");
+  } else if (signal.includes("WAIT") || score < 50) {
+    signalBox.classList.add("wait");
+  } else {
+    signalBox.classList.add("hold");
+  }
+
+  signalBox.innerText = `${signal} | Score: ${score}`;
+
+  let rec = "";
+  if (krwPct > usdPct + 1) {
+    rec = "🇰🇷 원화 환전 우위: 150만원 기준 루블 환전력이 더 좋습니다.";
+  } else if (usdPct > krwPct + 1) {
+    rec = "💵 달러 환전 우위: 1000달러 기준 루블 환전력이 더 좋습니다.";
+  } else {
+    rec = "⚖️ 원화와 달러 환전 매력이 비슷합니다.";
+  }
+
+  document.getElementById("recommendation").innerText = rec;
+
+  new Chart(document.getElementById("chart"), {
+    type:"line",
     data:{
-      labels:scored.map(d=>d.date),
+      labels:data.map(d=>d.date),
       datasets:[
-        {label:'USD/RUB (CBR)', data:scored.map(d=>d.cbr_usd_rub), borderColor:'#f59e0b', backgroundColor:'#f59e0b', yAxisID:'y', tension:.25, pointRadius:5, pointHoverRadius:7},
-        {label:'KRW/RUB (CALC)', data:scored.map(d=>d.calc_rub_krw), borderColor:'#06b6d4', backgroundColor:'#06b6d4', yAxisID:'y1', tension:.25, pointRadius:5, pointHoverRadius:7}
+        {
+          label:"USD/RUB",
+          data:data.map(d=>Number(d.cbr_usd_rub ?? d.usd_rub)),
+          borderColor:"#f59e0b",
+          backgroundColor:"#f59e0b",
+          tension:0.3,
+          pointRadius:5
+        },
+        {
+          label:"KRW/RUB",
+          data:data.map(d=>Number(d.calc_rub_krw ?? d.krw_rub)),
+          borderColor:"#06b6d4",
+          backgroundColor:"#06b6d4",
+          yAxisID:"y1",
+          tension:0.3,
+          pointRadius:5
+        }
       ]
     },
     options:{
-      responsive:true, maintainAspectRatio:false,
-      layout:{padding:{left:40,right:56,top:34,bottom:24}},
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{left:40,right:50,top:20,bottom:20}},
       plugins:{
-        legend:{labels:{color:'#e5e7eb', font:{size:14}}},
-        datalabels:{color:'#e5e7eb', align:'top', anchor:'end', font:{size:11, weight:'bold'}, formatter:v=>Number(v).toFixed(2)},
+        legend:{labels:{color:"#e5e7eb"}},
         tooltip:{enabled:true}
       },
       scales:{
-        x:{ticks:{color:'#cbd5e1', maxRotation:45, minRotation:45}, grid:{color:'rgba(148,163,184,.15)'}},
-        y:{position:'left', ticks:{color:'#f59e0b'}, grid:{color:'rgba(148,163,184,.15)'}, title:{display:true, text:'USD/RUB', color:'#f59e0b'}},
-        y1:{position:'right', ticks:{color:'#06b6d4'}, grid:{drawOnChartArea:false}, title:{display:true, text:'KRW/RUB', color:'#06b6d4'}}
+        x:{ticks:{color:"#cbd5e1", maxRotation:45, minRotation:45}},
+        y:{position:"left", ticks:{color:"#f59e0b"}},
+        y1:{position:"right", ticks:{color:"#06b6d4"}, grid:{drawOnChartArea:false}}
       }
     }
   });
 
-  const tbody = document.getElementById('table');
-  tbody.innerHTML = '';
-  scored.slice().reverse().forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.date}</td><td>${fmt(r.bok_usd_krw,2)}</td><td>${fmt(r.cbr_usd_rub,2)}</td><td>${fmt(r.calc_rub_krw,2)}</td><td>${intFmt(r.krw_1_5m_to_rub ?? (1500000/r.calc_rub_krw))} RUB</td><td>${intFmt(r.usd_1000_to_rub ?? (1000*r.cbr_usd_rub))} RUB</td><td>${r.score}</td><td class="${signalClass(r.score)}">${r.signal}</td>`;
-    tbody.appendChild(tr);
+  const table = document.getElementById("table");
+  table.innerHTML = "";
+
+  data.slice().reverse().forEach(d => {
+    const usdRub = Number(d.cbr_usd_rub ?? d.usd_rub);
+    const krwRub = Number(d.calc_rub_krw ?? d.krw_rub);
+    const krwToRub = Number(d.krw_1_5m_to_rub ?? 1500000 / krwRub);
+    const usdToRub = Number(d.usd_1000_to_rub ?? 1000 * usdRub);
+
+    table.innerHTML += `
+      <tr>
+        <td>${d.date}</td>
+        <td>${fmt(usdRub,2)}</td>
+        <td>${fmt(krwRub,2)}</td>
+        <td>${intFmt(krwToRub)}</td>
+        <td>${intFmt(usdToRub)}</td>
+        <td>${d.score ?? "-"}</td>
+        <td>${d.signal ?? "-"}</td>
+      </tr>
+    `;
   });
-}
-load().catch(err => {
-  document.getElementById('signal').innerText = '데이터 오류: ' + err.message;
-  console.error(err);
 });
 </script>
 </body>
