@@ -1,0 +1,36 @@
+name: Update FX rates
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:30 UTC = 13:30 Moscow / 19:30 Korea. BOK and CBR daily data should normally be available by then.
+    - cron: "30 10 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update rates.json
+        env:
+          BOK_API_KEY: ${{ secrets.BOK_API_KEY }}
+        run: python update_rates.py
+
+      - name: Commit updated rates.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update FX rates"
+          file_pattern: rates.json
