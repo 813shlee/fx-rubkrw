@@ -4,40 +4,167 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FX Decision System</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { margin:0; background:#0f172a; color:white; font-family:Arial,sans-serif; text-align:center; font-size:17px; }
-.container { max-width:1200px; margin:auto; padding:24px; }
-h1 { margin-bottom:8px; font-size:32px; }
-#signal { padding:12px 22px; border-radius:999px; display:inline-block; margin:14px 0 20px; font-weight:bold; font-size:18px; }
+body {
+  margin:0;
+  background:#0f172a;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+  font-size:17px;
+}
+
+.container {
+  max-width:1200px;
+  margin:auto;
+  padding:24px;
+}
+
+h1 {
+  font-size:32px;
+  margin-bottom:8px;
+}
+
+#signal {
+  padding:12px 22px;
+  border-radius:999px;
+  display:inline-block;
+  margin:14px 0 20px;
+  font-weight:bold;
+  font-size:18px;
+}
+
 .buy { background:#14532d; color:#bbf7d0; }
 .hold { background:#713f12; color:#fde68a; }
 .wait { background:#7f1d1d; color:#fecaca; }
-.grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:20px; }
-.card { background:#1e293b; padding:18px; border-radius:14px; }
-.card h3 { margin:0 0 10px; color:#94a3b8; font-size:17px; }
-.value { font-size:26px; font-weight:bold; }
-.chart { height:540px; background:#111827; border-radius:18px; padding:24px; margin:24px 0; }
-.section-title { margin-top:32px; margin-bottom:14px; font-size:22px; color:#cbd5e1; font-weight:bold; }
-.table-box { background:#111827; border-radius:16px; padding:12px; overflow-x:auto; }
-table { width:100%; border-collapse:collapse; }
-th, td { padding:12px; border-bottom:1px solid #334155; font-size:16px; }
-th { color:#94a3b8; }
-.panel { background:#1e293b; padding:22px; border-radius:16px; margin-top:20px; }
-.formula { color:#cbd5e1; font-size:16px; line-height:1.8; margin-bottom:16px; }
-input { padding:12px; margin:6px; width:260px; border-radius:8px; border:none; font-size:16px; }
-button { padding:12px 18px; border:none; border-radius:10px; background:#2563eb; color:white; cursor:pointer; font-size:16px; margin-top:10px; }
-.result { margin-top:16px; font-size:17px; text-align:left; line-height:1.7; background:#0b1220; padding:16px; border-radius:12px; }
-@media(max-width:900px){ .grid{grid-template-columns:repeat(2,1fr);} .chart{height:440px;padding:16px;} }
-@media(max-width:560px){ .container{padding:16px;} .grid{grid-template-columns:1fr;} h1{font-size:26px;} .value{font-size:24px;} }
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:14px;
+  margin-bottom:20px;
+}
+
+.card {
+  background:#1e293b;
+  padding:18px;
+  border-radius:14px;
+}
+
+.card h3 {
+  margin:0 0 10px;
+  color:#94a3b8;
+  font-size:17px;
+}
+
+.value {
+  font-size:26px;
+  font-weight:bold;
+}
+
+.chart {
+  height:540px;
+  background:#111827;
+  border-radius:18px;
+  padding:24px;
+  margin:24px 0;
+}
+
+.section-title {
+  margin-top:32px;
+  margin-bottom:14px;
+  font-size:22px;
+  color:#cbd5e1;
+  font-weight:bold;
+}
+
+.table-box {
+  background:#111827;
+  border-radius:16px;
+  padding:12px;
+  overflow-x:auto;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+th, td {
+  padding:12px;
+  border-bottom:1px solid #334155;
+  font-size:16px;
+}
+
+th {
+  color:#94a3b8;
+}
+
+.panel {
+  background:#1e293b;
+  padding:22px;
+  border-radius:16px;
+  margin-top:20px;
+}
+
+.formula {
+  color:#cbd5e1;
+  font-size:16px;
+  line-height:1.8;
+  margin-bottom:16px;
+}
+
+input {
+  padding:12px;
+  margin:6px;
+  width:260px;
+  border-radius:8px;
+  border:none;
+  font-size:16px;
+}
+
+button {
+  padding:12px 18px;
+  border:none;
+  border-radius:10px;
+  background:#2563eb;
+  color:white;
+  cursor:pointer;
+  font-size:16px;
+  margin-top:10px;
+}
+
+.result {
+  margin-top:16px;
+  font-size:17px;
+  text-align:left;
+  line-height:1.7;
+  background:#0b1220;
+  padding:16px;
+  border-radius:12px;
+}
+
+@media(max-width:900px){
+  .grid{grid-template-columns:repeat(2,1fr);}
+  .chart{height:440px;padding:16px;}
+}
+
+@media(max-width:560px){
+  .container{padding:16px;}
+  .grid{grid-template-columns:1fr;}
+}
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
 <h1>FX Decision System</h1>
+
 <div id="signal">Loading...</div>
 
 <div class="grid">
@@ -48,9 +175,12 @@ button { padding:12px 18px; border:none; border-radius:10px; background:#2563eb;
   <div class="card"><h3>1000 USD → RUB</h3><div class="value" id="usdToRub">-</div></div>
 </div>
 
-<div class="chart"><canvas id="chart"></canvas></div>
+<div class="chart">
+<canvas id="chart"></canvas>
+</div>
 
 <div class="section-title">📊 일자별 데이터</div>
+
 <div class="table-box">
 <table>
 <thead>
@@ -64,59 +194,73 @@ button { padding:12px 18px; border:none; border-radius:10px; background:#2563eb;
 </div>
 
 <div class="section-title">💱 실제 환전소 비교 (100,000 RUB 기준)</div>
+
 <div class="panel">
+
   <div class="formula">
-    계산 기준: 목표 금액 <b>100,000 RUB</b><br>
-    ① 원화 경로 비용 = 100,000 × 직접 입력한 RUB/KRW<br>
-    ② 달러 경로 비용 = (100,000 ÷ 직접 입력한 USD/RUB) × 직접 입력한 USD/KRW<br>
-    ③ 두 비용 중 더 적은 KRW 비용이 유리
+    계산 기준: <b>100,000 RUB</b><br>
+    ① 원화 경로 = 100,000 × RUB/KRW<br>
+    ② 달러 경로 = (100,000 ÷ USD/RUB) × BOK USD/KRW<br>
+    ③ 더 낮은 KRW 비용이 유리
   </div>
 
-  <input id="usd" type="number" step="0.0001" placeholder="USD → RUB 예: 73.8">
-  <input id="rub" type="number" step="0.0001" placeholder="RUB → KRW 예: 20.9">
-  <input id="usdKrw" type="number" step="0.0001" placeholder="USD → KRW 예: 1520">
+  <input id="usdRub" type="number" step="0.0001" placeholder="USD → RUB (예: 73.8)">
+  <input id="rubKrw" type="number" step="0.0001" placeholder="RUB → KRW (예: 20.9)">
 
   <br>
+
   <button onclick="calc()">비교 실행</button>
 
   <div class="result" id="result">입력 대기 중</div>
+
 </div>
 
 </div>
 
 <script>
+
 let latestGlobal = null;
 
-function numberFmt(n, digits = 2) {
-  return Number(n).toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+function fmt(n,d=2){
+  return Number(n).toLocaleString("ko-KR", {
+    minimumFractionDigits:d,
+    maximumFractionDigits:d
+  });
 }
-function intFmt(n) {
+function intFmt(n){
   return Math.round(Number(n)).toLocaleString("ko-KR");
 }
 
 fetch("rates.json?v=" + Date.now())
 .then(r => r.json())
 .then(data => {
+
   const latest = data.at(-1);
   latestGlobal = latest;
 
   const bok = Number(latest.bok_usd_krw);
-  const usdRub = Number(latest.cbr_usd_rub ?? latest.usd_rub);
-  const krwRub = Number(latest.calc_rub_krw ?? latest.krw_rub);
+  const usdRub = Number(latest.cbr_usd_rub);
+  const krwRub = Number(latest.calc_rub_krw);
 
-  document.getElementById("bok").innerText = numberFmt(bok, 2);
-  document.getElementById("usdRub").innerText = numberFmt(usdRub, 2);
-  document.getElementById("krwRub").innerText = numberFmt(krwRub, 2);
-  document.getElementById("krwToRub").innerText = intFmt(1500000 / krwRub);
-  document.getElementById("usdToRub").innerText = intFmt(1000 * usdRub);
+  document.getElementById("bok").innerText = fmt(bok,2);
+  document.getElementById("usdRub").innerText = fmt(usdRub,2);
+  document.getElementById("krwRub").innerText = fmt(krwRub,2);
+
+  document.getElementById("krwToRub").innerText =
+    intFmt(1500000 / krwRub);
+
+  document.getElementById("usdToRub").innerText =
+    intFmt(1000 * usdRub);
 
   const signalBox = document.getElementById("signal");
   const score = Number(latest.score ?? 60);
   const signal = latest.signal ?? "HOLD";
+
   signalBox.innerText = `${signal} | Score: ${score}`;
   signalBox.className = "";
-  if (signal.includes("BUY") || score >= 70) signalBox.classList.add("buy");
-  else if (signal.includes("WAIT") || score < 50) signalBox.classList.add("wait");
+
+  if(signal.includes("BUY") || score>=70) signalBox.classList.add("buy");
+  else if(signal.includes("WAIT") || score<50) signalBox.classList.add("wait");
   else signalBox.classList.add("hold");
 
   new Chart(document.getElementById("chart"), {
@@ -124,90 +268,78 @@ fetch("rates.json?v=" + Date.now())
     data:{
       labels:data.map(d=>d.date),
       datasets:[
-        { label:"USD/RUB", data:data.map(d=>Number(d.cbr_usd_rub ?? d.usd_rub)), borderColor:"orange", backgroundColor:"orange", tension:0.3, pointRadius:4 },
-        { label:"KRW/RUB", data:data.map(d=>Number(d.calc_rub_krw ?? d.krw_rub)), borderColor:"cyan", backgroundColor:"cyan", yAxisID:"y1", tension:0.3, pointRadius:4 }
+        {
+          label:"USD/RUB",
+          data:data.map(d=>Number(d.cbr_usd_rub)),
+          borderColor:"orange",
+          tension:0.3
+        },
+        {
+          label:"KRW/RUB",
+          data:data.map(d=>Number(d.calc_rub_krw)),
+          borderColor:"cyan",
+          yAxisID:"y1",
+          tension:0.3
+        }
       ]
     },
     options:{
       responsive:true,
-      maintainAspectRatio:false,
-      layout:{ padding:{left:30,right:40,top:20,bottom:20} },
-      plugins:{ legend:{ labels:{color:"#e5e7eb", font:{size:15}} } },
-      scales:{
-        x:{ticks:{color:"#cbd5e1", font:{size:13}}},
-        y:{position:"left", ticks:{color:"#f59e0b", font:{size:13}}},
-        y1:{position:"right", ticks:{color:"#06b6d4", font:{size:13}}, grid:{drawOnChartArea:false}}
-      }
+      maintainAspectRatio:false
     }
   });
 
   const table = document.getElementById("table");
   table.innerHTML = "";
-  data.slice().reverse().forEach(d => {
-    const bokRow = Number(d.bok_usd_krw);
-    const usdRubRow = Number(d.cbr_usd_rub ?? d.usd_rub);
-    const krwRubRow = Number(d.calc_rub_krw ?? d.krw_rub);
+
+  data.slice().reverse().forEach(d=>{
     table.innerHTML += `
       <tr>
         <td>${d.date}</td>
-        <td>${numberFmt(bokRow, 2)}</td>
-        <td>${numberFmt(usdRubRow, 2)}</td>
-        <td>${numberFmt(krwRubRow, 2)}</td>
-        <td>${intFmt(1500000 / krwRubRow)}</td>
-        <td>${intFmt(1000 * usdRubRow)}</td>
-        <td>${d.score ?? "-"}</td>
-        <td>${d.signal ?? "-"}</td>
+        <td>${fmt(d.bok_usd_krw,2)}</td>
+        <td>${fmt(d.cbr_usd_rub,2)}</td>
+        <td>${fmt(d.calc_rub_krw,2)}</td>
+        <td>${intFmt(1500000 / d.calc_rub_krw)}</td>
+        <td>${intFmt(1000 * d.cbr_usd_rub)}</td>
+        <td>${d.score}</td>
+        <td>${d.signal}</td>
       </tr>
     `;
   });
-})
-.catch(() => {
-  document.getElementById("signal").innerText = "데이터 로딩 실패";
-  document.getElementById("signal").className = "wait";
+
 });
 
-function calc() {
-  const usdRub = Number(document.getElementById("usd").value);
-  const rubKrw = Number(document.getElementById("rub").value);
-  const usdKrw = Number(document.getElementById("usdKrw").value);
+function calc(){
 
-  if (!usdRub || !rubKrw || !usdKrw) {
-    document.getElementById("result").innerHTML = "USD/RUB, RUB/KRW, USD/KRW 값을 모두 입력해주세요.";
+  const usdRub = Number(document.getElementById("usdRub").value);
+  const rubKrw = Number(document.getElementById("rubKrw").value);
+
+  if(!usdRub || !rubKrw){
+    document.getElementById("result").innerHTML = "값 입력 필요";
     return;
   }
 
-  const targetRub = 100000;
+  const target = 100000;
 
-  const krwCost = targetRub * rubKrw;
+  const krwCost = target * rubKrw;
 
-  const usdNeeded = targetRub / usdRub;
-  const usdCostInKrw = usdNeeded * usdKrw;
+  const usdNeeded = target / usdRub;
+  const usdCost = usdNeeded * latestGlobal.bok_usd_krw;
 
-  const diff = Math.abs(krwCost - usdCostInKrw);
-  const diffPct = diff / Math.min(krwCost, usdCostInKrw) * 100;
+  let res = "";
 
-  let decision = "";
-  if (krwCost < usdCostInKrw) decision = "🇰🇷 원화 경로가 더 유리합니다.";
-  else if (usdCostInKrw < krwCost) decision = "💵 달러 경로가 더 유리합니다.";
-  else decision = "⚖️ 두 경로가 거의 동일합니다.";
+  res += `원화 경로: <b>${intFmt(krwCost)} KRW</b><br>`;
+  res += `달러 경로: <b>${intFmt(usdCost)} KRW</b><br><br>`;
 
-  document.getElementById("result").innerHTML = `
-    <b>목표:</b> ${intFmt(targetRub)} RUB 확보<br><br>
+  if(krwCost < usdCost){
+    res += "🇰🇷 원화 경로가 유리";
+  }else{
+    res += "💵 달러 경로가 유리";
+  }
 
-    <b>① 원화 경로</b><br>
-    100,000 RUB × ${numberFmt(rubKrw, 4)} KRW/RUB<br>
-    = <b>${intFmt(krwCost)} KRW</b><br><br>
-
-    <b>② 달러 경로</b><br>
-    100,000 RUB ÷ ${numberFmt(usdRub, 4)} USD/RUB<br>
-    = ${numberFmt(usdNeeded, 2)} USD<br>
-    ${numberFmt(usdNeeded, 2)} USD × 직접 입력 USD/KRW ${numberFmt(usdKrw, 2)}<br>
-    = <b>${intFmt(usdCostInKrw)} KRW</b><br><br>
-
-    <b>결론:</b> ${decision}<br>
-    <b>차이:</b> ${intFmt(diff)} KRW (${numberFmt(diffPct, 2)}%)
-  `;
+  document.getElementById("result").innerHTML = res;
 }
+
 </script>
 
 </body>
