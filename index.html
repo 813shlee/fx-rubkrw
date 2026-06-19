@@ -1,193 +1,163 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FX AI Intelligence</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body {
-  background:#0f172a;
-  color:white;
-  font-family:Arial;
-  margin:0;
-  text-align:center;
-}
-
-.container { max-width:1200px; margin:auto; padding:20px; }
-
-h1 { margin:10px; }
-
-#signal {
-  padding:10px 18px;
-  border-radius:999px;
-  background:#1e293b;
-  display:inline-block;
-  margin-bottom:15px;
-  font-weight:bold;
-}
-
-.grid {
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:12px;
-}
-
-.card {
-  background:#1e293b;
-  padding:16px;
-  border-radius:12px;
-}
-
-.value { font-size:22px; font-weight:bold; }
-
-.chart {
-  height:520px;
-  margin:20px 0;
-}
-
-button {
-  background:#2563eb;
-  border:none;
-  padding:10px 16px;
-  border-radius:10px;
-  color:white;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FX AI Intelligence</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    body { margin:0; font-family:Arial, sans-serif; background:#0f172a; color:white; text-align:center; }
+    .container { max-width:1240px; margin:0 auto; padding:24px 28px 60px; }
+    h1 { margin:10px 0 6px; font-size:32px; }
+    .sub { color:#94a3b8; font-size:14px; margin-bottom:10px; }
+    .signal { display:inline-block; padding:11px 20px; background:#1e293b; border-radius:999px; margin:8px 0 20px; font-weight:bold; }
+    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:16px auto 26px; }
+    .card { background:#1e293b; padding:18px 14px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+    .card h3 { margin:0 0 10px; color:#cbd5e1; font-size:15px; }
+    .value { font-size:24px; font-weight:700; }
+    .unit { margin-top:6px; color:#94a3b8; font-size:13px; }
+    .chart-box { height:560px; background:#111827; border-radius:18px; padding:28px 42px; margin:18px auto 22px; box-sizing:border-box; }
+    .button-row { margin:16px 0 22px; }
+    button { background:#2563eb; border:none; border-radius:10px; color:white; padding:10px 18px; cursor:pointer; font-size:15px; }
+    button:hover { background:#1d4ed8; }
+    .table-wrap { overflow-x:auto; margin-top:20px; }
+    table { width:100%; border-collapse:collapse; background:#111827; border-radius:12px; overflow:hidden; font-size:14px; }
+    th,td { padding:10px 12px; border-bottom:1px solid #334155; text-align:right; white-space:nowrap; }
+    th:first-child, td:first-child { text-align:left; }
+    th { color:#cbd5e1; background:#1e293b; }
+    .buy { color:#34d399; font-weight:700; }
+    .hold { color:#facc15; font-weight:700; }
+    .wait { color:#f87171; font-weight:700; }
+    @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} .chart-box{height:500px; padding:22px 18px;} }
+    @media (max-width:560px){ .container{padding:18px 12px 40px} h1{font-size:25px} .grid{grid-template-columns:1fr} .chart-box{height:440px; padding:18px 10px;} }
+  </style>
 </head>
-
 <body>
-
 <div class="container">
+  <h1>FX AI Intelligence System</h1>
+  <div class="sub" id="today">오늘 날짜: -</div>
+  <div class="sub" id="dataDate">데이터 기준일: -</div>
+  <div class="signal" id="signal">Loading...</div>
 
-<h1>FX AI Intelligence System</h1>
-
-<div id="signal">LOADING...</div>
-
-<div class="grid">
-  <div class="card">
-    <div>USD/RUB</div>
-    <div class="value" id="usd"></div>
+  <div class="grid">
+    <div class="card"><h3>USD/RUB</h3><div class="value" id="usdRub">-</div><div class="unit">CBR 기준</div></div>
+    <div class="card"><h3>KRW/RUB</h3><div class="value" id="krwRub">-</div><div class="unit">계산 기준, 1 RUB = 원</div></div>
+    <div class="card"><h3>150만원 → RUB</h3><div class="value" id="krwToRub">-</div><div class="unit">KRW → USD → RUB</div></div>
+    <div class="card"><h3>1000 USD → RUB</h3><div class="value" id="usdToRub">-</div><div class="unit">USD → RUB</div></div>
   </div>
 
-  <div class="card">
-    <div>KRW/RUB</div>
-    <div class="value" id="krw"></div>
+  <div class="chart-box"><canvas id="chart"></canvas></div>
+  <div class="button-row"><button onclick="manualRefresh()">🔄 최신 데이터 다시 불러오기</button></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>날짜</th><th>BOK USD/KRW</th><th>CBR USD/RUB</th><th>CALC RUB/KRW</th><th>150만원→RUB</th><th>1000USD→RUB</th><th>점수</th><th>판단</th>
+        </tr>
+      </thead>
+      <tbody id="table"></tbody>
+    </table>
   </div>
-
-  <div class="card">
-    <div>150만원 → RUB</div>
-    <div class="value" id="krwToRub"></div>
-  </div>
-
-  <div class="card">
-    <div>1000 USD → RUB</div>
-    <div class="value" id="usdToRub"></div>
-  </div>
-</div>
-
-<div class="chart">
-<canvas id="chart"></canvas>
-</div>
-
-<button onclick="location.reload()">Refresh</button>
-
 </div>
 
 <script>
+Chart.register(ChartDataLabels);
 
-function calc(bok, cbr){
-  return bok / cbr;
+function fmt(n, digits=2){
+  if (!Number.isFinite(Number(n))) return '-';
+  return Number(n).toLocaleString('ko-KR', {minimumFractionDigits:digits, maximumFractionDigits:digits});
 }
+function intFmt(n){ return Number.isFinite(Number(n)) ? Math.round(Number(n)).toLocaleString('ko-KR') : '-'; }
+function todayText(){ return new Date().toLocaleDateString('ko-KR', {year:'numeric', month:'2-digit', day:'2-digit', weekday:'short'}); }
+function manualRefresh(){ location.href = location.pathname + '?v=' + Date.now(); }
 
-function mean(arr){
-  return arr.reduce((a,b)=>a+b,0)/arr.length;
+function normalize(row){
+  const cbr = Number(row.cbr_usd_rub ?? row.usd_rub);
+  const bok = Number(row.bok_usd_krw ?? row.usd_krw);
+  let rubKrw = Number(row.calc_rub_krw ?? row.krw_rub);
+  if (!Number.isFinite(rubKrw) && Number.isFinite(bok) && Number.isFinite(cbr)) rubKrw = bok / cbr;
+  return {...row, cbr_usd_rub:cbr, bok_usd_krw:bok, calc_rub_krw:rubKrw};
 }
-
-function std(arr){
-  const m = mean(arr);
-  return Math.sqrt(mean(arr.map(x=> (x-m)**2 )));
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function std(arr){ const m=mean(arr); return Math.sqrt(mean(arr.map(x=>(x-m)**2))); }
+function trend(arr){ return arr.length < 2 ? 0 : (arr.at(-1)-arr[0])/arr[0]; }
+function scoreFor(row, series){
+  if (Number.isFinite(Number(row.score))) return Number(row.score);
+  const recent = series.slice(-10);
+  const avg = mean(recent);
+  const vol = std(recent);
+  const t = trend(recent);
+  const dev = (row.calc_rub_krw - avg) / avg;
+  // 낮은 KRW/RUB가 원화 환전에 유리하므로 dev가 낮을수록 점수 상승. USD/RUB 상승 추세도 가점.
+  let score = 60 + (-dev * 900) + (t * -250) - (vol * 1.2);
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
-
-function trend(arr){
-  return (arr.at(-1) - arr.at(0)) / arr.at(0);
+function signal(score){
+  if (score >= 80) return '🟢 STRONG BUY';
+  if (score >= 65) return '🟢 BUY';
+  if (score >= 50) return '🟡 HOLD';
+  return '🔴 WAIT';
 }
+function signalClass(score){ return score >= 65 ? 'buy' : score >= 50 ? 'hold' : 'wait'; }
 
-function aiScore(t, v, vol){
-  return Math.max(0,
-    50 +
-    t*2000 -
-    vol*5
-  );
-}
+async function load(){
+  document.getElementById('today').innerText = '오늘 날짜: ' + todayText();
+  const res = await fetch('rates.json?v=' + Date.now());
+  const raw = await res.json();
+  const data = raw.map(normalize).filter(r => Number.isFinite(r.cbr_usd_rub) && Number.isFinite(r.calc_rub_krw));
+  if (!data.length) throw new Error('rates.json에서 유효한 데이터를 찾지 못했습니다.');
 
-function signal(s){
-  if(s>75) return "🟢 STRONG BUY (환전 유리)";
-  if(s>55) return "🟡 HOLD";
-  return "🔴 WAIT";
-}
+  const series = data.map(r => r.calc_rub_krw);
+  const scored = data.map(r => ({...r, score: scoreFor(r, series)}));
+  scored.forEach(r => { r.signal = r.signal ?? signal(r.score); });
+  const latest = scored.at(-1);
 
-fetch("rates.json?v="+Date.now())
-.then(r=>r.json())
-.then(data=>{
+  document.getElementById('dataDate').innerText = '데이터 기준일: ' + latest.date;
+  document.getElementById('usdRub').innerText = fmt(latest.cbr_usd_rub, 2);
+  document.getElementById('krwRub').innerText = fmt(latest.calc_rub_krw, 2);
+  document.getElementById('krwToRub').innerText = intFmt(latest.krw_1_5m_to_rub ?? (1500000 / latest.calc_rub_krw)) + ' RUB';
+  document.getElementById('usdToRub').innerText = intFmt(latest.usd_1000_to_rub ?? (1000 * latest.cbr_usd_rub)) + ' RUB';
+  document.getElementById('signal').innerText = latest.signal + ' | Score: ' + latest.score;
 
-  const latest = data.at(-1);
-
-  const series = data.map(d => calc(d.bok_usd_krw, d.cbr_usd_rub));
-
-  const avg = mean(series.slice(-10));
-  const vol = std(series.slice(-10));
-  const t = trend(series.slice(-10));
-
-  const score = aiScore(t, (series.at(-1)-avg)/avg, vol);
-
-  document.getElementById("signal").innerText =
-    signal(score) + " | Score: " + score.toFixed(1);
-
-  document.getElementById("usd").innerText = latest.cbr_usd_rub.toFixed(2);
-
-  const krwRub = calc(latest.bok_usd_krw, latest.cbr_usd_rub);
-
-  document.getElementById("krw").innerText = krwRub.toFixed(2);
-
-  document.getElementById("krwToRub").innerText =
-    Math.round(1500000/krwRub).toLocaleString();
-
-  document.getElementById("usdToRub").innerText =
-    Math.round(1000*latest.cbr_usd_rub).toLocaleString();
-
-  new Chart(document.getElementById("chart"), {
-    type:"line",
+  new Chart(document.getElementById('chart'), {
+    type:'line',
     data:{
-      labels:data.map(d=>d.date),
+      labels:scored.map(d=>d.date),
       datasets:[
-        {
-          label:"USD/RUB",
-          data:data.map(d=>d.cbr_usd_rub),
-          borderColor:"orange"
-        },
-        {
-          label:"KRW/RUB",
-          data:data.map(d=>calc(d.bok_usd_krw,d.cbr_usd_rub)),
-          borderColor:"cyan",
-          yAxisID:"y1"
-        }
+        {label:'USD/RUB (CBR)', data:scored.map(d=>d.cbr_usd_rub), borderColor:'#f59e0b', backgroundColor:'#f59e0b', yAxisID:'y', tension:.25, pointRadius:5, pointHoverRadius:7},
+        {label:'KRW/RUB (CALC)', data:scored.map(d=>d.calc_rub_krw), borderColor:'#06b6d4', backgroundColor:'#06b6d4', yAxisID:'y1', tension:.25, pointRadius:5, pointHoverRadius:7}
       ]
     },
     options:{
-      responsive:true,
-      maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{left:40,right:56,top:34,bottom:24}},
+      plugins:{
+        legend:{labels:{color:'#e5e7eb', font:{size:14}}},
+        datalabels:{color:'#e5e7eb', align:'top', anchor:'end', font:{size:11, weight:'bold'}, formatter:v=>Number(v).toFixed(2)},
+        tooltip:{enabled:true}
+      },
       scales:{
-        y:{position:"left"},
-        y1:{position:"right"}
+        x:{ticks:{color:'#cbd5e1', maxRotation:45, minRotation:45}, grid:{color:'rgba(148,163,184,.15)'}},
+        y:{position:'left', ticks:{color:'#f59e0b'}, grid:{color:'rgba(148,163,184,.15)'}, title:{display:true, text:'USD/RUB', color:'#f59e0b'}},
+        y1:{position:'right', ticks:{color:'#06b6d4'}, grid:{drawOnChartArea:false}, title:{display:true, text:'KRW/RUB', color:'#06b6d4'}}
       }
     }
   });
 
+  const tbody = document.getElementById('table');
+  tbody.innerHTML = '';
+  scored.slice().reverse().forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.date}</td><td>${fmt(r.bok_usd_krw,2)}</td><td>${fmt(r.cbr_usd_rub,2)}</td><td>${fmt(r.calc_rub_krw,2)}</td><td>${intFmt(r.krw_1_5m_to_rub ?? (1500000/r.calc_rub_krw))} RUB</td><td>${intFmt(r.usd_1000_to_rub ?? (1000*r.cbr_usd_rub))} RUB</td><td>${r.score}</td><td class="${signalClass(r.score)}">${r.signal}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+load().catch(err => {
+  document.getElementById('signal').innerText = '데이터 오류: ' + err.message;
+  console.error(err);
 });
-
 </script>
-
 </body>
 </html>
