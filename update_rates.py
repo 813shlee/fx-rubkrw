@@ -21,10 +21,12 @@ def to_float(value):
 def fetch_bok_usd_krw(days_back=80):
     end = date.today()
     start = end - timedelta(days=days_back)
+
     url = (
         f"https://ecos.bok.or.kr/api/StatisticSearch/{BOK_API_KEY}/json/kr/1/5000/731Y001/D/"
         f"{start:%Y%m%d}/{end:%Y%m%d}"
     )
+
     r = requests.get(url, timeout=25)
     r.raise_for_status()
     payload = r.json()
@@ -34,6 +36,7 @@ def fetch_bok_usd_krw(days_back=80):
 
     rows = payload["StatisticSearch"].get("row", [])
     result = {}
+
     for row in rows:
         name = row.get("ITEM_NAME1", "")
         if "미국달러" in name:
@@ -50,9 +53,12 @@ def fetch_bok_usd_krw(days_back=80):
 def fetch_cbr_usd_rub(iso_date):
     y, m, d = iso_date.split("-")
     date_req = f"{d}/{m}/{y}"
+
     url = "https://www.cbr.ru/scripts/XML_daily_eng.asp"
+
     r = requests.get(url, params={"date_req": date_req}, timeout=25)
     r.raise_for_status()
+
     root = ET.fromstring(r.content)
 
     for valute in root.findall("Valute"):
@@ -61,6 +67,7 @@ def fetch_cbr_usd_rub(iso_date):
             nominal = to_float(valute.findtext("Nominal"))
             value = to_float(valute.findtext("Value"))
             return value / nominal
+
     raise RuntimeError(f"USD not found in CBR response for {iso_date}")
 
 
@@ -87,24 +94,48 @@ def signal(score):
     return "🔴 WAIT"
 
 
+def last_bok_value_on_or_before(bok_map, iso_date):
+    available_dates = [d for d in bok_map.keys() if d <= iso_date]
+
+    if not available_dates:
+        raise RuntimeError(f"No BOK USD/KRW value available on or before {iso_date}")
+
+    last_date = max(available_dates)
+    return bok_map[last_date], last_date
+
+
 def main():
-    bok = fetch_bok_usd_krw()
-    recent_dates = list(bok.keys())[-10:]
+    today = date.today()
+    bok = fetch_bok_usd_krw(days_back=80)
+
+    # BOK 영업일 기준이 아니라 오늘 기준 최근 10일 기준으로 생성
+    recent_dates = [
+        (today - timedelta(days=i)).isoformat()
+        for i in range(9, -1, -1)
+    ]
 
     rows = []
     calc_series = []
+
     for dt in recent_dates:
-        bok_usd_krw = bok[dt]
+        bok_usd_krw, bok_source_date = last_bok_value_on_or_before(bok, dt)
         cbr_usd_rub = fetch_cbr_usd_rub(dt)
+
         calc_rub_krw = bok_usd_krw / cbr_usd_rub
         calc_series.append(calc_rub_krw)
+
         rows.append({
             "date": dt,
+
+            # 실제 사용된 BOK 날짜. 주말/휴일에는 직전 영업일 날짜가 들어감.
+            "bok_source_date": bok_source_date,
+
             "bok_usd_krw": round(bok_usd_krw, 4),
             "cbr_usd_rub": round(cbr_usd_rub, 6),
             "calc_rub_krw": round(calc_rub_krw, 6),
             "krw_1_5m_to_rub": round(1500000 / calc_rub_krw),
             "usd_1000_to_rub": round(1000 * cbr_usd_rub),
+
             # backward-compatible aliases
             "usd_rub": round(cbr_usd_rub, 6),
             "krw_rub": round(calc_rub_krw, 6),
@@ -115,8 +146,14 @@ def main():
         row["score"] = s
         row["signal"] = signal(s)
 
-    OUT.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Wrote {OUT} with {len(rows)} rows. Latest: {rows[-1]['date']}")
+    OUT.write_text(
+        json.dumps(rows, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+
+    print(f"Wrote {OUT} with {len(rows)} rows.")
+    print(f"Latest date: {rows[-1]['date']}")
+    print(f"Latest BOK source date: {rows[-1]['bok_source_date']}")
 
 
 if __name__ == "__main__":
