@@ -21,53 +21,40 @@ def to_float(value):
 def fetch_bok_usd_krw(days_back=80):
     end = date.today()
     start = end - timedelta(days=days_back)
-
     url = (
         f"https://ecos.bok.or.kr/api/StatisticSearch/{BOK_API_KEY}/json/kr/1/5000/731Y001/D/"
         f"{start:%Y%m%d}/{end:%Y%m%d}"
     )
-
     r = requests.get(url, timeout=25)
     r.raise_for_status()
     payload = r.json()
-
     if "StatisticSearch" not in payload:
         raise RuntimeError(f"Unexpected BOK response: {payload}")
-
     rows = payload["StatisticSearch"].get("row", [])
     result = {}
-
     for row in rows:
         name = row.get("ITEM_NAME1", "")
         if "미국달러" in name:
             t = row["TIME"]
             d = f"{t[:4]}-{t[4:6]}-{t[6:]}"
             result[d] = to_float(row["DATA_VALUE"])
-
     if not result:
         raise RuntimeError("No USD/KRW rows found from BOK.")
-
     return dict(sorted(result.items()))
 
 
 def fetch_cbr_usd_rub(iso_date):
     y, m, d = iso_date.split("-")
     date_req = f"{d}/{m}/{y}"
-
     url = "https://www.cbr.ru/scripts/XML_daily_eng.asp"
-
     r = requests.get(url, params={"date_req": date_req}, timeout=25)
     r.raise_for_status()
-
     root = ET.fromstring(r.content)
-
     for valute in root.findall("Valute"):
-        code = valute.findtext("CharCode")
-        if code == "USD":
+        if valute.findtext("CharCode") == "USD":
             nominal = to_float(valute.findtext("Nominal"))
             value = to_float(valute.findtext("Value"))
             return value / nominal
-
     raise RuntimeError(f"USD not found in CBR response for {iso_date}")
 
 
@@ -78,8 +65,6 @@ def score_system(calc_series, current):
     vol = math.sqrt(variance)
     dev = (current - avg) / avg
     trend = 0 if len(recent) < 2 else (recent[-1] - recent[0]) / recent[0]
-
-    # CALC_RUB_KRW는 1 RUB당 KRW. 낮을수록 원화로 루블 환전 유리.
     score = 60 + (-dev * 900) + (-trend * 250) - (vol * 1.2)
     return max(0, min(100, round(score)))
 
@@ -96,10 +81,8 @@ def signal(score):
 
 def last_bok_value_on_or_before(bok_map, iso_date):
     available_dates = [d for d in bok_map.keys() if d <= iso_date]
-
     if not available_dates:
         raise RuntimeError(f"No BOK USD/KRW value available on or before {iso_date}")
-
     last_date = max(available_dates)
     return bok_map[last_date], last_date
 
@@ -107,50 +90,29 @@ def last_bok_value_on_or_before(bok_map, iso_date):
 def main():
     today = date.today()
     bok = fetch_bok_usd_krw(days_back=80)
-
-    # BOK 영업일 기준이 아니라 오늘 기준 최근 10일 기준으로 생성
-    recent_dates = [
-        (today - timedelta(days=i)).isoformat()
-        for i in range(9, -1, -1)
-    ]
-
+    recent_dates = [(today - timedelta(days=i)).isoformat() for i in range(9, -1, -1)]
     rows = []
     calc_series = []
-
     for dt in recent_dates:
         bok_usd_krw, bok_source_date = last_bok_value_on_or_before(bok, dt)
         cbr_usd_rub = fetch_cbr_usd_rub(dt)
-
         calc_rub_krw = bok_usd_krw / cbr_usd_rub
         calc_series.append(calc_rub_krw)
-
         rows.append({
             "date": dt,
-
-            # 실제 사용된 BOK 날짜. 주말/휴일에는 직전 영업일 날짜가 들어감.
             "bok_source_date": bok_source_date,
-
             "bok_usd_krw": round(bok_usd_krw, 4),
             "cbr_usd_rub": round(cbr_usd_rub, 6),
             "calc_rub_krw": round(calc_rub_krw, 6),
             "krw_1_5m_to_rub": round(1500000 / calc_rub_krw),
-            "usd_1000_to_rub": round(1000 * cbr_usd_rub),
-
-            # backward-compatible aliases
             "usd_rub": round(cbr_usd_rub, 6),
             "krw_rub": round(calc_rub_krw, 6),
         })
-
     for i, row in enumerate(rows):
         s = score_system(calc_series[: i + 1], row["calc_rub_krw"])
         row["score"] = s
         row["signal"] = signal(s)
-
-    OUT.write_text(
-        json.dumps(rows, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-
+    OUT.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {OUT} with {len(rows)} rows.")
     print(f"Latest date: {rows[-1]['date']}")
     print(f"Latest BOK source date: {rows[-1]['bok_source_date']}")
