@@ -1,1 +1,124 @@
-
+[
+  {
+    "date": "2026-06-15",
+    "bok_source_date": "2026-06-15",
+    "bok_usd_krw": 1520.4,
+    "cbr_usd_rub": 719077.0,
+    "calc_rub_krw": 0.002114,
+    "krw_1_5m_to_rub": 709428769,
+    "usd_rub": 719077.0,
+    "krw_rub": 0.002114,
+    "score": 60,
+    "signal": "■ NORMAL"
+  },
+  {
+    "date": "2026-06-16",
+    "bok_source_date": "2026-06-16",
+    "bok_usd_krw": 1510.0,
+    "cbr_usd_rub": 724513.0,
+    "calc_rub_krw": 0.002084,
+    "krw_1_5m_to_rub": 719714901,
+    "usd_rub": 724513.0,
+    "krw_rub": 0.002084,
+    "score": 70,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-17",
+    "bok_source_date": "2026-06-17",
+    "bok_usd_krw": 1513.5,
+    "cbr_usd_rub": 721388.0,
+    "calc_rub_krw": 0.002098,
+    "krw_1_5m_to_rub": 714953419,
+    "usd_rub": 721388.0,
+    "krw_rub": 0.002098,
+    "score": 62,
+    "signal": "■ NORMAL"
+  },
+  {
+    "date": "2026-06-18",
+    "bok_source_date": "2026-06-18",
+    "bok_usd_krw": 1512.8,
+    "cbr_usd_rub": 727479.0,
+    "calc_rub_krw": 0.00208,
+    "krw_1_5m_to_rub": 721323704,
+    "usd_rub": 727479.0,
+    "krw_rub": 0.00208,
+    "score": 70,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-19",
+    "bok_source_date": "2026-06-19",
+    "bok_usd_krw": 1523.4,
+    "cbr_usd_rub": 733591.0,
+    "calc_rub_krw": 0.002077,
+    "krw_1_5m_to_rub": 722322765,
+    "usd_rub": 733591.0,
+    "krw_rub": 0.002077,
+    "score": 70,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-20",
+    "bok_source_date": "2026-06-19",
+    "bok_usd_krw": 1523.4,
+    "cbr_usd_rub": 734390.0,
+    "calc_rub_krw": 0.002074,
+    "krw_1_5m_to_rub": 723109492,
+    "usd_rub": 734390.0,
+    "krw_rub": 0.002074,
+    "score": 71,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-21",
+    "bok_source_date": "2026-06-19",
+    "bok_usd_krw": 1523.4,
+    "cbr_usd_rub": 734390.0,
+    "calc_rub_krw": 0.002074,
+    "krw_1_5m_to_rub": 723109492,
+    "usd_rub": 734390.0,
+    "krw_rub": 0.002074,
+    "score": 70,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-22",
+    "bok_source_date": "2026-06-22",
+    "bok_usd_krw": 1535.0,
+    "cbr_usd_rub": 734390.0,
+    "calc_rub_krw": 0.00209,
+    "krw_1_5m_to_rub": 717644951,
+    "usd_rub": 734390.0,
+    "krw_rub": 0.00209,
+    "score": 61,
+    "signal": "■ NORMAL"
+  },
+  {
+    "date": "2026-06-23",
+    "bok_source_date": "2026-06-23",
+    "bok_usd_krw": 1535.7,
+    "cbr_usd_rub": 737650.0,
+    "calc_rub_krw": 0.002082,
+    "krw_1_5m_to_rub": 720502051,
+    "usd_rub": 737650.0,
+    "krw_rub": 0.002082,
+    "score": 66,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-24",
+    "bok_source_date": "2026-06-24",
+    "bok_usd_krw": 1537.2,
+    "cbr_usd_rub": 746200.0,
+    "calc_rub_krw": 0.00206,
+    "krw_1_5m_to_rub": 728142077,
+    "usd_rub": 746200.0,
+    "krw_rub": 0.00206,
+    "naver_rub_krw": 2.0,
+    "naver_calc_diff": 1.9979,
+    "score": 77,
+    "signal": "● GOOD"
+  }
+]
