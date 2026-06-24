@@ -222,6 +222,9 @@ def fetch_naver_rub_krw():
     result["naver_cash_sell"] = _extract_after_label(text, "현찰 파실 때")
     result["naver_send"] = _extract_after_label(text, "송금 보내실 때")
     result["naver_receive"] = _extract_after_label(text, "송금 받으실 때")
+    result["naver_tc_buy"] = _extract_after_label(text, "T/C 사실 때")
+    result["naver_check_sell"] = _extract_after_label(text, "외화수표 파실 때")
+
     m = re.search(r"전일대비\s*([▲▼+\-]?)\s*([0-9][0-9,\.]*)\s*([+\-]?[0-9][0-9,\.]*%)", text)
     if m:
         sign = -1 if m.group(1) in ("▼", "-") else 1
