@@ -1,17 +1,5 @@
 [
   {
-    "date": "2026-06-14",
-    "bok_source_date": "2026-06-12",
-    "bok_usd_krw": 1527.0,
-    "cbr_usd_rub": 71.9077,
-    "calc_rub_krw": 21.235556,
-    "krw_1_5m_to_rub": 70636,
-    "usd_rub": 71.9077,
-    "krw_rub": 21.235556,
-"score": 85,
-"signal": "▲ BEST"
-  },
-  {
     "date": "2026-06-15",
     "bok_source_date": "2026-06-15",
     "bok_usd_krw": 1520.4,
@@ -20,7 +8,7 @@
     "krw_1_5m_to_rub": 70943,
     "usd_rub": 71.9077,
     "krw_rub": 21.143772,
-    "score": 63,
+    "score": 60,
     "signal": "■ NORMAL"
   },
   {
@@ -32,8 +20,8 @@
     "krw_1_5m_to_rub": 71971,
     "usd_rub": 72.4513,
     "krw_rub": 20.841586,
-"score": 85,
-"signal": "▲ BEST"
+    "score": 70,
+    "signal": "● GOOD"
   },
   {
     "date": "2026-06-17",
@@ -44,8 +32,8 @@
     "krw_1_5m_to_rub": 71495,
     "usd_rub": 72.1388,
     "krw_rub": 20.980388,
-    "score": 66,
-    "signal": "● GOOD"
+    "score": 62,
+    "signal": "■ NORMAL"
   },
   {
     "date": "2026-06-18",
@@ -56,7 +44,7 @@
     "krw_1_5m_to_rub": 72132,
     "usd_rub": 72.7479,
     "krw_rub": 20.795102,
-    "score": 74,
+    "score": 70,
     "signal": "● GOOD"
   },
   {
@@ -68,7 +56,7 @@
     "krw_1_5m_to_rub": 72232,
     "usd_rub": 73.3591,
     "krw_rub": 20.76634,
-    "score": 74,
+    "score": 70,
     "signal": "● GOOD"
   },
   {
@@ -80,8 +68,8 @@
     "krw_1_5m_to_rub": 72311,
     "usd_rub": 73.439,
     "krw_rub": 20.743747,
-"score": 45,
-"signal": "▼ BAD"
+    "score": 70,
+    "signal": "● GOOD"
   },
   {
     "date": "2026-06-21",
@@ -92,7 +80,7 @@
     "krw_1_5m_to_rub": 72311,
     "usd_rub": 73.439,
     "krw_rub": 20.743747,
-    "score": 73,
+    "score": 70,
     "signal": "● GOOD"
   },
   {
@@ -104,8 +92,8 @@
     "krw_1_5m_to_rub": 71764,
     "usd_rub": 73.439,
     "krw_rub": 20.901701,
-"score": 45,
-"signal": "▼ BAD"
+    "score": 61,
+    "signal": "■ NORMAL"
   },
   {
     "date": "2026-06-23",
@@ -116,7 +104,19 @@
     "krw_1_5m_to_rub": 72050,
     "usd_rub": 73.765,
     "krw_rub": 20.818817,
-    "score": 68,
+    "score": 65,
+    "signal": "● GOOD"
+  },
+  {
+    "date": "2026-06-24",
+    "bok_source_date": "2026-06-24",
+    "bok_usd_krw": 1537.2,
+    "cbr_usd_rub": 74.62,
+    "calc_rub_krw": 20.600375,
+    "krw_1_5m_to_rub": 72814,
+    "usd_rub": 74.62,
+    "krw_rub": 20.600375,
+    "score": 76,
     "signal": "● GOOD"
   }
 ]
