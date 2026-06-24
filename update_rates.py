@@ -3,50 +3,70 @@ import json
 import math
 import os
 import re
+import signal as os_signal
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 BOK_API_KEY = os.environ.get("BOK_API_KEY")
 if not BOK_API_KEY:
     raise SystemExit("BOK_API_KEY environment variable is missing.")
 
 OUT = Path("rates.json")
-NAVER_URL = "https://finance.naver.com/marketindex/exchangeDetail.naver?marketindexCd=FX_RUBKRW"
+NAVER_DETAIL_URL = "https://finance.naver.com/marketindex/exchangeDetail.naver?marketindexCd=FX_RUBKRW"
+NAVER_DAILY_URL = "https://finance.naver.com/marketindex/exchangeDailyQuote.naver?marketindexCd=FX_RUBKRW&page=1"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/125.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://finance.naver.com/marketindex/",
+    "Connection": "close",
+}
 
 
-def make_session():
-    session = requests.Session()
-    retry = Retry(
-        total=2,
-        connect=2,
-        read=2,
-        backoff_factor=0.8,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=("GET",),
-        raise_on_status=False,
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
+def _timeout_handler(signum, frame):
+    raise TimeoutError("update_rates.py exceeded the safety time limit")
 
-
-SESSION = make_session()
+# GitHub Actions에서 외부 사이트가 멈춰도 job이 무한 대기하지 않게 하는 안전장치
+try:
+    os_signal.signal(os_signal.SIGALRM, _timeout_handler)
+    os_signal.alarm(240)
+except Exception:
+    pass
 
 
 def to_float(value):
+    """한국/러시아식 숫자 표기를 안전하게 float로 변환.
+
+    - CBR XML: 74,6200  -> 74.62
+    - BOK/Naver: 1,537.20 -> 1537.20
+    """
     if value is None:
         return None
     text = html.unescape(str(value)).strip()
     text = re.sub(r"[^0-9,\.\-]", "", text)
-    if not text:
+    if not text or text in ("-", ".", ","):
         return None
-    return float(text.replace(",", ""))
+
+    if "," in text and "." in text:
+        # 1,537.20 처럼 comma가 천 단위, dot이 소수점인 경우
+        text = text.replace(",", "")
+    elif "," in text and "." not in text:
+        # 74,6200 처럼 comma가 소수점인 경우
+        text = text.replace(",", ".")
+
+    return float(text)
+
+
+def get_url(url, **kwargs):
+    return requests.get(url, timeout=kwargs.pop("timeout", (5, 12)), **kwargs)
 
 
 def fetch_bok_usd_krw(days_back=80):
@@ -56,7 +76,7 @@ def fetch_bok_usd_krw(days_back=80):
         f"https://ecos.bok.or.kr/api/StatisticSearch/{BOK_API_KEY}/json/kr/1/5000/731Y001/D/"
         f"{start:%Y%m%d}/{end:%Y%m%d}"
     )
-    r = SESSION.get(url, timeout=(5, 20))
+    r = get_url(url, timeout=(5, 20))
     r.raise_for_status()
     payload = r.json()
     if "StatisticSearch" not in payload:
@@ -78,7 +98,7 @@ def fetch_cbr_usd_rub(iso_date):
     y, m, d = iso_date.split("-")
     date_req = f"{d}/{m}/{y}"
     url = "https://www.cbr.ru/scripts/XML_daily_eng.asp"
-    r = SESSION.get(url, params={"date_req": date_req}, timeout=(5, 15))
+    r = get_url(url, params={"date_req": date_req}, timeout=(5, 12))
     r.raise_for_status()
     root = ET.fromstring(r.content)
     for valute in root.findall("Valute"):
@@ -87,6 +107,18 @@ def fetch_cbr_usd_rub(iso_date):
             value = to_float(valute.findtext("Value"))
             return value / nominal
     raise RuntimeError(f"USD not found in CBR response for {iso_date}")
+
+
+def _decode_response(response):
+    raw = response.content
+    for enc in [response.encoding, "euc-kr", "cp949", "utf-8"]:
+        if not enc:
+            continue
+        try:
+            return raw.decode(enc)
+        except Exception:
+            pass
+    return response.text
 
 
 def _clean_text(raw):
@@ -98,13 +130,11 @@ def _clean_text(raw):
 
 
 def _flex_label_pattern(label):
-    # 네이버 표기는 "사실때" / "사실 때"처럼 띄어쓰기가 바뀔 수 있어 글자 사이 공백을 허용합니다.
     compact = re.sub(r"\s+", "", label)
     return r"\s*".join(map(re.escape, compact))
 
 
 def _extract_after_label(text, label):
-    # 예: "현찰 사실 때 22.56" / "송금 보내실 때 21.33" / "T/C 사실 때 N/A"
     pattern = _flex_label_pattern(label) + r"\s*([0-9][0-9,\.]*|N/A)"
     m = re.search(pattern, text)
     if not m:
@@ -112,99 +142,70 @@ def _extract_after_label(text, label):
     return m.group(1) if m.group(1) == "N/A" else to_float(m.group(1))
 
 
-def _decode_response(response):
-    # 네이버 금융은 euc-kr/utf-8이 섞여 보일 수 있어 여러 방식으로 안전하게 해석합니다.
-    candidates = []
-    if response.encoding:
-        candidates.append(response.encoding)
-    candidates += ["euc-kr", "cp949", "utf-8"]
-    raw_bytes = response.content
-    for enc in candidates:
-        try:
-            return raw_bytes.decode(enc)
-        except Exception:
-            pass
-    return response.text
+def _extract_main_naver_rate(raw, text):
+    # 1) no_today 영역 안의 blind 텍스트가 가장 정확함
+    m = re.search(r'class=["\']no_today["\'][\s\S]{0,1600}?<span[^>]*class=["\']blind["\'][^>]*>\s*([0-9][0-9,\.]*)\s*</span>', raw, flags=re.I)
+    if m:
+        return to_float(m.group(1))
+
+    # 2) no_today 영역 안의 em 태그 직접 숫자
+    m = re.search(r'class=["\']no_today["\'][\s\S]{0,1600}?<em[^>]*>\s*([0-9][0-9,\.]*)\s*</em>', raw, flags=re.I)
+    if m:
+        return to_float(m.group(1))
+
+    # 3) og:title / title 등에 들어간 '20.61원' 형태
+    for pat in [
+        r'러시아\s*RUB\s*([0-9][0-9,\.]*)\s*원',
+        r'RUBKRW[^0-9]{0,40}([0-9][0-9,\.]*)\s*원',
+        r'([0-9][0-9,\.]*)\s*원\s*전일대비',
+    ]:
+        m = re.search(pat, text, flags=re.I)
+        if m:
+            return to_float(m.group(1))
+    return None
 
 
 def fetch_naver_rub_krw():
-    """네이버 금융 RUB/KRW 상세 페이지에서 주요 고시환율을 가져온다.
+    result = empty_naver_data()
 
-    개선점:
-    - GitHub Actions에서 차단 가능성을 줄이기 위해 브라우저에 가까운 header 사용
-    - connect/read timeout 분리
-    - 429/5xx는 짧게 재시도
-    - 네이버의 띄어쓰기/인코딩 변화에 좀 더 강하게 파싱
-    """
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/125.0.0.0 Safari/537.36"
-        ),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Referer": "https://finance.naver.com/marketindex/",
-        "Connection": "close",
-    }
-    r = SESSION.get(NAVER_URL, headers=headers, timeout=(5, 10))
+    # 상세 페이지: 대표 환율 + 현찰/송금 값을 가져옴
+    r = get_url(NAVER_DETAIL_URL, headers=HEADERS, timeout=(5, 10))
     r.raise_for_status()
-
     raw = _decode_response(r)
     text = _clean_text(raw)
 
-    rate = None
+    result["naver_rub_krw"] = _extract_main_naver_rate(raw, text)
+    result["naver_cash_buy"] = _extract_after_label(text, "현찰 사실 때")
+    result["naver_cash_sell"] = _extract_after_label(text, "현찰 파실 때")
+    result["naver_send"] = _extract_after_label(text, "송금 보내실 때")
+    result["naver_receive"] = _extract_after_label(text, "송금 받으실 때")
+    result["naver_tc_buy"] = _extract_after_label(text, "T/C 사실 때")
+    result["naver_check_sell"] = _extract_after_label(text, "외화수표 파실 때")
 
-    # 1) 상세 페이지의 대표 환율 영역(no_today)을 우선 사용
-    m = re.search(r'class=["\']no_today["\'][\s\S]{0,800}?<em[^>]*>([0-9][0-9,\.]+)</em>', raw, flags=re.I)
-    if m:
-        rate = to_float(m.group(1))
-
-    # 2) 태그 제거 텍스트에서 보조 추출
-    if rate is None:
-        m = re.search(r"러시아\s*RUB(?:KRW)?\s*(?:환율)?\s*([0-9][0-9,\.]+)\s*원", text)
-        if m:
-            rate = to_float(m.group(1))
-
-    # 3) 그래도 안 되면 '전일대비' 앞쪽의 대표 숫자를 보조 추출
-    if rate is None:
-        m = re.search(r"([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+\.[0-9]+)\s*원\s*전일대비", text)
-        if m:
-            rate = to_float(m.group(1))
-
-    change = None
-    change_pct = None
-    m = re.search(r"전일대비\s*([▲▼+\-]?)\s*([0-9][0-9,\.]+)\s*([+\-]?[0-9][0-9,\.]*%)", text)
+    m = re.search(r"전일대비\s*([▲▼+\-]?)\s*([0-9][0-9,\.]*)\s*([+\-]?[0-9][0-9,\.]*%)", text)
     if m:
         sign = -1 if m.group(1) in ("▼", "-") else 1
-        change = sign * to_float(m.group(2))
-        change_pct = m.group(3)
+        result["naver_change"] = sign * to_float(m.group(2))
+        result["naver_change_pct"] = m.group(3)
 
-    time_text = None
     m = re.search(r"(20\d{2}\.\d{2}\.\d{2}\s+\d{2}:\d{2})", text)
     if m:
-        time_text = m.group(1)
+        result["naver_time"] = m.group(1)
 
-    result = {
-        "naver_rub_krw": rate,
-        "naver_change": change,
-        "naver_change_pct": change_pct,
-        "naver_time": time_text,
-        "naver_cash_buy": _extract_after_label(text, "현찰 사실 때"),
-        "naver_cash_sell": _extract_after_label(text, "현찰 파실 때"),
-        "naver_send": _extract_after_label(text, "송금 보내실 때"),
-        "naver_receive": _extract_after_label(text, "송금 받으실 때"),
-        "naver_tc_buy": _extract_after_label(text, "T/C 사실 때"),
-        "naver_check_sell": _extract_after_label(text, "외화수표 파실 때"),
-    }
-
-    # 대표 환율조차 없으면 HTML 구조 변경/차단 가능성이 높으므로 명확히 실패 처리
+    # 보조 페이지: 상세 페이지에서 대표 환율만 실패할 때 최신 고시값 보완
     if result["naver_rub_krw"] is None:
-        snippet = text[:300]
-        raise RuntimeError(f"Naver RUB/KRW rate was not found. Snippet: {snippet}")
+        try:
+            r2 = get_url(NAVER_DAILY_URL, headers=HEADERS, timeout=(5, 8))
+            r2.raise_for_status()
+            text2 = _clean_text(_decode_response(r2))
+            m2 = re.search(r"(20\d{2}\.\d{2}\.\d{2})\s+([0-9][0-9,\.]*)", text2)
+            if m2:
+                result["naver_rub_krw"] = to_float(m2.group(2))
+        except Exception as exc:
+            print(f"Warning: Naver daily fallback failed: {exc}")
 
+    # 최후 보정: 현찰/송금 값이 있는데 대표 환율만 없으면 송금 평균으로 근사하지 않고 null 유지
+    # 대표 환율을 임의 계산하면 원자료와 달라질 수 있으므로 화면에서 '대표 환율 없음'으로 표시하게 둔다.
     return result
 
 
@@ -282,7 +283,6 @@ def main():
             "usd_rub": round(cbr_usd_rub, 6),
             "krw_rub": round(calc_rub_krw, 6),
         }
-        # 네이버는 현재 상세 고시값이므로 최신 행에만 표시하고, 그래프는 최신점만 표시합니다.
         row.update(naver if dt == recent_dates[-1] else empty_naver_data())
         rows.append(row)
 
@@ -295,6 +295,8 @@ def main():
     print(f"Wrote {OUT} with {len(rows)} rows.")
     print(f"Latest date: {rows[-1]['date']}")
     print(f"Latest BOK source date: {rows[-1]['bok_source_date']}")
+    print(f"Latest CBR USD/RUB: {rows[-1]['cbr_usd_rub']}")
+    print(f"Latest Naver RUB/KRW: {rows[-1]['naver_rub_krw']}")
 
 
 if __name__ == "__main__":
