@@ -30,8 +30,9 @@ h1{font-size:32px;margin-bottom:8px}
 .section-title{margin-top:32px;margin-bottom:14px;font-size:22px;color:#cbd5e1;font-weight:bold}
 .table-box{background:#111827;border-radius:16px;padding:12px;overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-th,td{padding:12px;border-bottom:1px solid #334155;font-size:16px}
+th,td{padding:12px;border-bottom:1px solid #334155;font-size:16px;white-space:nowrap}
 th{color:#94a3b8}
+th:first-child,td:first-child{min-width:64px}
 .panel{background:#1e293b;padding:22px;border-radius:16px;margin-top:20px}
 .formula{color:#cbd5e1;font-size:16px;line-height:1.8;margin-bottom:16px}
 input{padding:12px;margin:6px;width:260px;border-radius:8px;border:none;font-size:16px}
@@ -58,7 +59,6 @@ button{padding:12px 18px;border:none;border-radius:10px;background:#2563eb;color
   <div class="card"><h3>150만원 → ? RUB</h3><div class="value" id="krwToRub">-</div></div>
 </div>
 
-<div id="calcGuide" class="result">오늘의 기준 환율 계산 중...</div>
 
 <div class="chart">
   <canvas id="chart"></canvas>
@@ -166,17 +166,6 @@ fetch("rates.json?v="+Date.now())
   document.getElementById("naverRubKrw").innerText=fmt(naverRubKrw,2);
   document.getElementById("krwToRub").innerText=intFmt(1500000/krwRub);
 
-  document.getElementById("calcGuide").innerHTML=`
-    <b>📌 오늘의 원화 환전 기준선</b><br><br>
-    현재 계산 환율(CALC): <b>1 RUB = ${fmt(krwRub,4)} KRW</b><br>
-    네이버 환율(NAVER): <b>1 RUB = ${fmt(naverRubKrw,4)} KRW</b><br>
-    차이(NAVER - CALC): <b>${fmt(naverDiff,4)} KRW/RUB</b><br><br>
-    실제 환전소에서 제시하는 <b>RUB → KRW</b> 환율과 비교하세요.<br><br>
-    ▲ <b>${fmt(krwRub,4)}보다 낮으면</b> → 원화로 루블 환전 유리<br>
-    ● <b>${fmt(krwRub,4)} 부근이면</b> → 보통 수준<br>
-    ▼ <b>${fmt(krwRub,4)}보다 높으면</b> → 원화로 루블 환전 불리
-  `;
-
   const score=Number(latest.score ?? 60);
   const signal=latest.signal ?? "■ NORMAL";
   const signalBox=document.getElementById("signal");
@@ -228,7 +217,7 @@ fetch("rates.json?v="+Date.now())
       scales:{
         x:{ticks:{color:"#cbd5e1",font:{size:13}}},
         y:{position:"left",ticks:{color:"#f59e0b",font:{size:13}}},
-        y1:{position:"right",ticks:{color:"#06b6d4",font:{size:13}},grid:{drawOnChartArea:false}}
+        y1:{position:"right",min:18,max:23,ticks:{color:"#06b6d4",font:{size:13},stepSize:1},grid:{drawOnChartArea:false}}
       }
     }
   });
@@ -246,7 +235,7 @@ fetch("rates.json?v="+Date.now())
 
     table.innerHTML+=`
       <tr>
-        <td>${d.date}</td>
+        <td>${String(d.date).slice(5)}</td>
         <td>${fmt(d.bok_usd_krw,2)}</td>
         <td>${fmt(usdRubRow,2)}</td>
         <td>${fmt(krwRubRow,2)}</td>
