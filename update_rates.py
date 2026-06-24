@@ -14,24 +14,27 @@ if not BOK_API_KEY:
 
 OUT = Path("rates.json")
 
+# 네이버 현재 RUB/KRW 상세 페이지
 NAVER_URL = "https://finance.naver.com/marketindex/exchangeDetail.naver"
 
 
 # ----------------------------
-# 숫자 파서 (핵심 수정)
+# 숫자 파서
 # ----------------------------
 def parse_kr_number(value):
-    # 1,537.20 → 1537.20
+    """한국/네이버식 숫자: 1,537.20 -> 1537.20"""
     return float(str(value).replace(",", "").strip())
 
 
 def parse_ru_number(value):
-    # 74,6200 → 74.6200
+    """러시아/CBR식 숫자: 74,6200 -> 74.6200"""
     return float(str(value).replace(",", ".").strip())
 
 
 # ----------------------------
-# 기존 데이터 로드 (NAVER 누적용)
+# 기존 rates.json 로드
+# 네이버 값은 매일 누적 보존하기 위해 사용
+# 단, 잘못된 값은 복사하지 않음
 # ----------------------------
 def load_existing_rows():
     if not OUT.exists():
@@ -40,7 +43,8 @@ def load_existing_rows():
     try:
         rows = json.loads(OUT.read_text(encoding="utf-8"))
         return {r.get("date"): r for r in rows if r.get("date")}
-    except:
+    except Exception as e:
+        print(f"Existing rates.json could not be read. Starting fresh. Reason: {e}")
         return {}
 
 
@@ -60,23 +64,35 @@ def fetch_bok_usd_krw(days_back=80):
     r.raise_for_status()
     payload = r.json()
 
-    rows = payload["StatisticSearch"].get("row", [])
+    if "StatisticSearch" not in payload:
+        raise RuntimeError(f"Unexpected BOK response: {payload}")
 
+    rows = payload["StatisticSearch"].get("row", [])
     result = {}
 
     for row in rows:
         if "미국달러" in row.get("ITEM_NAME1", ""):
-            d = f"{row['TIME'][:4]}-{row['TIME'][4:6]}-{row['TIME'][6:]}"
+            t = row["TIME"]
+            d = f"{t[:4]}-{t[4:6]}-{t[6:]}"
             result[d] = parse_kr_number(row["DATA_VALUE"])
 
     if not result:
-        raise RuntimeError("No BOK USD/KRW data found")
+        raise RuntimeError("No BOK USD/KRW data found.")
 
     return dict(sorted(result.items()))
 
 
+def last_bok_value_on_or_before(bok_map, iso_date):
+    available_dates = [d for d in bok_map.keys() if d <= iso_date]
+    if not available_dates:
+        raise RuntimeError(f"No BOK USD/KRW value available on or before {iso_date}")
+
+    source_date = max(available_dates)
+    return bok_map[source_date], source_date
+
+
 # ----------------------------
-# CBR USD/RUB (핵심 수정)
+# CBR USD/RUB
 # ----------------------------
 def fetch_cbr_usd_rub(iso_date):
     y, m, d = iso_date.split("-")
@@ -92,10 +108,9 @@ def fetch_cbr_usd_rub(iso_date):
         if valute.findtext("CharCode") == "USD":
             nominal = parse_ru_number(valute.findtext("Nominal"))
             value = parse_ru_number(valute.findtext("Value"))
-
             usd_rub = value / nominal
 
-            # 안전장치
+            # 이상치 방지: 746200 같은 값이면 여기서 실패시킴
             if usd_rub < 20 or usd_rub > 200:
                 raise RuntimeError(f"CBR USD/RUB looks wrong: {usd_rub}")
 
@@ -105,11 +120,15 @@ def fetch_cbr_usd_rub(iso_date):
 
 
 # ----------------------------
-# NAVER RUB/KRW (안정형)
+# NAVER RUB/KRW
 # ----------------------------
 def fetch_naver_rub_krw():
     headers = {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
         "Referer": "https://finance.naver.com/marketindex/",
     }
 
@@ -119,37 +138,50 @@ def fetch_naver_rub_krw():
         headers=headers,
         timeout=25,
     )
-
     r.raise_for_status()
     r.encoding = "euc-kr"
     html = r.text
 
-    # 🔥 핵심: 테이블 숫자 전부 추출 후 첫 번째 사용
-    matches = re.findall(r'([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]+)', html)
+    # 1차: 상세 페이지의 현재가 영역
+    m = re.search(
+        r'class=["\']no_today["\'][\s\S]*?<span class=["\']blind["\']>\s*([0-9,.]+)\s*</span>',
+        html,
+    )
+    if m:
+        value = parse_kr_number(m.group(1))
+        if 5 <= value <= 50:
+            return value
 
-    if not matches:
-        raise RuntimeError("NAVER RUB/KRW parsing failed - no numbers found")
+    # 2차: 페이지 전체 숫자 중 RUB/KRW 범위에 맞는 값 찾기
+    # 날짜/퍼센트/기타 숫자를 피하기 위해 5~50 범위만 허용
+    matches = re.findall(r'([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)', html)
+    candidates = []
+    for text in matches:
+        try:
+            value = parse_kr_number(text)
+            if 5 <= value <= 50:
+                candidates.append(value)
+        except Exception:
+            pass
 
-    value = parse_kr_number(matches[0])
+    if candidates:
+        return candidates[0]
 
-    # 안전장치
-    if value < 5 or value > 50:
-        raise RuntimeError(f"NAVER RUB/KRW out of range: {value}")
-
-    return value
-
-
+    raise RuntimeError("NAVER RUB/KRW parsing failed")
 
 
 # ----------------------------
 # scoring
 # ----------------------------
-def score_system(series, current):
-    recent = series[-10:]
+def score_system(calc_series, current):
+    recent = calc_series[-10:]
     avg = sum(recent) / len(recent)
+    variance = sum((x - avg) ** 2 for x in recent) / len(recent)
+    vol = math.sqrt(variance)
     dev = (current - avg) / avg
+    trend = 0 if len(recent) < 2 else (recent[-1] - recent[0]) / recent[0]
 
-    score = 60 + (-dev * 900)
+    score = 60 + (-dev * 900) + (-trend * 250) - (vol * 1.2)
     return max(0, min(100, round(score)))
 
 
@@ -167,60 +199,78 @@ def signal(score):
 # main
 # ----------------------------
 def main():
-    today = date.today().isoformat()
+    today_date = date.today()
+    today_iso = today_date.isoformat()
 
     existing = load_existing_rows()
+    bok = fetch_bok_usd_krw(days_back=80)
 
-    bok = fetch_bok_usd_krw()
-    naver_today = fetch_naver_rub_krw()
+    # 네이버가 실패해도 BOK/CBR 데이터는 업데이트되도록 처리
+    try:
+        naver_today = fetch_naver_rub_krw()
+    except Exception as e:
+        print(f"Naver fetch failed, skipping Naver value: {e}")
+        naver_today = None
 
-    dates = [(date.today() - timedelta(days=i)).isoformat() for i in range(9, -1, -1)]
+    dates = [
+        (today_date - timedelta(days=i)).isoformat()
+        for i in range(9, -1, -1)
+    ]
 
     rows = []
-    series = []
+    calc_series = []
 
     for dt in dates:
-        bok_val, bok_date = max((d for d in bok if d <= dt)), None
-        bok_usd = bok[bok_val]
-
-        cbr = fetch_cbr_usd_rub(dt)
-        calc = bok_usd / cbr
-
-        series.append(calc)
+        bok_usd_krw, bok_source_date = last_bok_value_on_or_before(bok, dt)
+        cbr_usd_rub = fetch_cbr_usd_rub(dt)
+        calc_rub_krw = bok_usd_krw / cbr_usd_rub
+        calc_series.append(calc_rub_krw)
 
         row = {
             "date": dt,
-            "bok_source_date": bok_val,
-            "bok_usd_krw": round(bok_usd, 4),
-            "cbr_usd_rub": round(cbr, 6),
-            "calc_rub_krw": round(calc, 6),
-            "krw_1_5m_to_rub": round(1500000 / calc),
-            "usd_rub": round(cbr, 6),
-            "krw_rub": round(calc, 6),
+            "bok_source_date": bok_source_date,
+            "bok_usd_krw": round(bok_usd_krw, 4),
+            "cbr_usd_rub": round(cbr_usd_rub, 6),
+            "calc_rub_krw": round(calc_rub_krw, 6),
+            "krw_1_5m_to_rub": round(1500000 / calc_rub_krw),
+            "usd_rub": round(cbr_usd_rub, 6),
+            "krw_rub": round(calc_rub_krw, 6),
         }
 
-        # 기존 네이버 유지
-        if dt in existing and existing[dt].get("naver_rub_krw"):
-            row["naver_rub_krw"] = existing[dt]["naver_rub_krw"]
+        # 기존 네이버 값 보존. 단, 2.0 같은 잘못된 값은 버림.
+        old = existing.get(dt)
+        if old and old.get("naver_rub_krw") is not None:
+            try:
+                old_naver = float(old["naver_rub_krw"])
+                if 5 <= old_naver <= 50:
+                    row["naver_rub_krw"] = round(old_naver, 4)
+                    row["naver_calc_diff"] = round(old_naver - calc_rub_krw, 4)
+            except Exception:
+                pass
 
-        # 오늘만 갱신
-        if dt == today and naver_today is not None:
+        # 오늘 값은 새로 갱신
+        if dt == today_iso and naver_today is not None:
             row["naver_rub_krw"] = round(naver_today, 4)
-            row["naver_calc_diff"] = round(naver_today - calc, 4)
+            row["naver_calc_diff"] = round(naver_today - calc_rub_krw, 4)
 
         rows.append(row)
 
-    # score
-    for i, r in enumerate(rows):
-        s = score_system(series[: i + 1], r["calc_rub_krw"])
-        r["score"] = s
-        r["signal"] = signal(s)
+    for i, row in enumerate(rows):
+        s = score_system(calc_series[: i + 1], row["calc_rub_krw"])
+        row["score"] = s
+        row["signal"] = signal(s)
 
-    OUT.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
+    OUT.write_text(
+        json.dumps(rows, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
-    print("DONE")
-    print("NAVER:", naver_today)
-    print("ROWS:", len(rows))
+    print(f"Wrote {OUT} with {len(rows)} rows.")
+    print(f"Latest date: {rows[-1]['date']}")
+    print(f"Latest BOK USD/KRW: {rows[-1]['bok_usd_krw']}")
+    print(f"Latest CBR USD/RUB: {rows[-1]['cbr_usd_rub']}")
+    print(f"Latest CALC RUB/KRW: {rows[-1]['calc_rub_krw']}")
+    print(f"Latest NAVER RUB/KRW: {rows[-1].get('naver_rub_krw')}")
 
 
 if __name__ == "__main__":
