@@ -165,8 +165,13 @@ def main():
 
     existing_by_date = load_existing_rows()
     bok = fetch_bok_usd_krw(days_back=80)
-    naver_today = fetch_naver_rub_krw()
 
+try:
+    naver_today = fetch_naver_rub_krw()
+except Exception as e:
+    print(f"Naver fetch failed, skipping Naver value: {e}")
+    naver_today = None
+    
     recent_dates = [
         (today - timedelta(days=i)).isoformat()
         for i in range(9, -1, -1)
@@ -199,7 +204,7 @@ def main():
                 row["naver_rub_krw"] = old_naver
                 row["naver_calc_diff"] = round(old_naver - calc_rub_krw, 4)
 
-        if dt == today_iso:
+        if dt == today_iso and naver_today is not None:
             row["naver_rub_krw"] = round(naver_today, 4)
             row["naver_calc_diff"] = round(naver_today - calc_rub_krw, 4)
 
