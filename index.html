@@ -5,24 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FX Decision System</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{margin:0;background:#0f172a;color:white;font-family:Arial,sans-serif;text-align:center;font-size:17px}
 .container{max-width:1200px;margin:auto;padding:24px}
 h1{font-size:32px;margin-bottom:8px}
 #signal{padding:12px 22px;border-radius:999px;display:inline-block;margin:14px 0 20px;font-weight:bold;font-size:18px}
-
-.signal-best{background:#7f1d1d;color:#fecaca}
-.signal-good{background:#14532d;color:#bbf7d0}
-.signal-normal{background:#713f12;color:#fde68a}
-.signal-bad{background:#1e3a8a;color:#bfdbfe}
-
-.text-best{color:#ff6b6b;font-weight:bold}
-.text-good{color:#51cf66;font-weight:bold}
-.text-normal{color:#ffd43b;font-weight:bold}
-.text-bad{color:#4dabf7;font-weight:bold}
-
-.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.best{background:#7f1d1d;color:#fecaca}
+.good{background:#14532d;color:#bbf7d0}
+.normal{background:#713f12;color:#fde68a}
+.bad{background:#1e3a8a;color:#bfdbfe}
+.buy{background:#14532d;color:#bbf7d0}
+.hold{background:#713f12;color:#fde68a}
+.wait{background:#1e3a8a;color:#bfdbfe}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .card{background:#1e293b;padding:18px;border-radius:14px}
 .card h3{margin:0 0 10px;color:#94a3b8;font-size:17px}
 .value{font-size:26px;font-weight:bold}
@@ -30,42 +25,30 @@ h1{font-size:32px;margin-bottom:8px}
 .section-title{margin-top:32px;margin-bottom:14px;font-size:22px;color:#cbd5e1;font-weight:bold}
 .table-box{background:#111827;border-radius:16px;padding:12px;overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-th,td{padding:12px;border-bottom:1px solid #334155;font-size:16px;white-space:nowrap}
+th,td{padding:12px;border-bottom:1px solid #334155;font-size:16px}
 th{color:#94a3b8}
-th:first-child,td:first-child{min-width:64px}
 .panel{background:#1e293b;padding:22px;border-radius:16px;margin-top:20px}
 .formula{color:#cbd5e1;font-size:16px;line-height:1.8;margin-bottom:16px}
 input{padding:12px;margin:6px;width:260px;border-radius:8px;border:none;font-size:16px}
 button{padding:12px 18px;border:none;border-radius:10px;background:#2563eb;color:white;cursor:pointer;font-size:16px;margin-top:10px}
 .result{margin-top:16px;font-size:17px;text-align:left;line-height:1.7;background:#0b1220;padding:16px;border-radius:12px}
-.sub-panel{background:#111827;border-radius:14px;padding:18px;margin-top:16px}
-
 @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.chart{height:440px;padding:16px}}
 @media(max-width:560px){.container{padding:16px}.grid{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
 <div class="container">
-
 <h1>FX Decision System</h1>
 <div id="signal">Loading...</div>
-
 <div class="grid">
   <div class="card"><h3>1 USD = ? KRW (BOK)</h3><div class="value" id="bok">-</div></div>
   <div class="card"><h3>1 USD = ? RUB (CBR)</h3><div class="value" id="usdRubCard">-</div></div>
   <div class="card"><h3>1 RUB = ? KRW (CALC)</h3><div class="value" id="krwRub">-</div></div>
-  <div class="card"><h3>1 RUB = ? KRW (NAVER)</h3><div class="value" id="naverRubKrw">-</div></div>
   <div class="card"><h3>150만원 → ? RUB</h3><div class="value" id="krwToRub">-</div></div>
 </div>
-
-
-<div class="chart">
-  <canvas id="chart"></canvas>
-</div>
-
+<div id="calcGuide" class="result">오늘의 기준 환율 계산 중...</div>
+<div class="chart"><canvas id="chart"></canvas></div>
 <div class="section-title">📊 일자별 데이터</div>
-
 <div class="table-box">
 <table>
 <thead>
@@ -74,7 +57,6 @@ button{padding:12px 18px;border:none;border-radius:10px;background:#2563eb;color
   <th>1 USD = ? KRW (BOK)</th>
   <th>1 USD = ? RUB (CBR)</th>
   <th>1 RUB = ? KRW (CALC)</th>
-  <th>1 RUB = ? KRW (NAVER)</th>
   <th>150만원 → ? RUB</th>
   <th>Score</th>
   <th>Signal</th>
@@ -83,68 +65,40 @@ button{padding:12px 18px;border:none;border-radius:10px;background:#2563eb;color
 <tbody id="table"></tbody>
 </table>
 </div>
-
-<div class="section-title">💱 실제 환전소 기준 환산 계산</div>
-
+<div class="section-title">💱 실제 환전소 비교 (100,000 RUB 기준)</div>
 <div class="panel">
   <div class="formula">
-    기준: <b>BOK USD/KRW</b>를 기준으로 달러 환전소와 원화 환전소의 대응값을 계산합니다.<br>
-    ① <b>USD → RUB</b> 환율을 입력하면, 같은 수준의 <b>RUB → KRW</b> 값을 계산<br>
-    ② <b>RUB → KRW</b> 환율을 입력하면, 같은 수준의 <b>USD → RUB</b> 값을 계산
+    계산 기준: <b>100,000 RUB</b><br>
+    ① 원화 경로 = 100,000 × 실제 RUB/KRW<br>
+    ② 달러 경로 = (100,000 ÷ 실제 USD/RUB) × BOK USD/KRW<br>
+    ③ 더 낮은 KRW 비용이 드는 경로가 유리<br>
+    ※ USD/KRW는 BOK 기준값을 사용합니다.
   </div>
-
-  <div class="sub-panel">
-    <h3>달러 환전소 기준</h3>
-    <input id="usdRubInput" type="number" step="0.0001" placeholder="1 USD → RUB 예: 75.0">
-    <button onclick="calcFromUsdRub()">대응 원/루블 계산</button>
-    <div class="result" id="usdRubResult">입력 대기 중</div>
-  </div>
-
-  <div class="sub-panel">
-    <h3>원화 환전소 기준</h3>
-    <input id="rubKrwInput" type="number" step="0.0001" placeholder="1 RUB → KRW 예: 20.0">
-    <button onclick="calcFromRubKrw()">대응 달러/루블 계산</button>
-    <div class="result" id="rubKrwResult">입력 대기 중</div>
-  </div>
-
+  <input id="realUsdRub" type="number" step="0.0001" placeholder="USD → RUB 예: 73.8">
+  <input id="rubKrw" type="number" step="0.0001" placeholder="RUB → KRW 예: 20.9">
   <br>
-
-  <button onclick="window.open('https://github.com/813shlee/fx/actions/workflows/update-rates.yml', '_blank')">
-    ⚙️ 환율 데이터 업데이트 실행
-  </button>
-
-  <button onclick="location.href='?v=' + Date.now()">
-    🔄 최신 데이터 다시 불러오기
-  </button>
+  <button onclick="calc()">비교 실행</button>
+  <div class="result" id="result">입력 대기 중</div>
+  <br>
+  <button onclick="window.open('https://github.com/813shlee/fx/actions/workflows/update-rates.yml', '_blank')">⚙️ 환율 데이터 업데이트 실행</button>
+  <button onclick="location.href='?v=' + Date.now()">🔄 최신 데이터 다시 불러오기</button>
 </div>
-
 </div>
 
 <script>
 let latestGlobal=null;
 
 function fmt(n,d=2){
-  if(n===null || n===undefined || n==="" || Number.isNaN(Number(n))) return "-";
   return Number(n).toLocaleString("ko-KR",{minimumFractionDigits:d,maximumFractionDigits:d});
 }
-function intFmt(n){
-  return Math.round(Number(n)).toLocaleString("ko-KR");
-}
+function intFmt(n){return Math.round(Number(n)).toLocaleString("ko-KR");}
 
-function signalBadgeClass(signal,score){
+function signalClass(signal,score){
   const s=String(signal||"");
-  if(s.includes("BEST") || score>=80) return "signal-best";
-  if(s.includes("GOOD") || s.includes("BUY") || score>=65) return "signal-good";
-  if(s.includes("BAD") || s.includes("WAIT") || score<50) return "signal-bad";
-  return "signal-normal";
-}
-
-function signalTextClass(signal,score){
-  const s=String(signal||"");
-  if(s.includes("BEST") || score>=80) return "text-best";
-  if(s.includes("GOOD") || s.includes("BUY") || score>=65) return "text-good";
-  if(s.includes("BAD") || s.includes("WAIT") || score<50) return "text-bad";
-  return "text-normal";
+  if(s.includes("BEST") || score>=80) return "best";
+  if(s.includes("GOOD") || s.includes("BUY") || score>=65) return "good";
+  if(s.includes("BAD") || s.includes("WAIT") || score<50) return "bad";
+  return "normal";
 }
 
 fetch("rates.json?v="+Date.now())
@@ -156,188 +110,109 @@ fetch("rates.json?v="+Date.now())
   const bok=Number(latest.bok_usd_krw);
   const usdRub=Number(latest.cbr_usd_rub ?? latest.usd_rub);
   const krwRub=Number(latest.calc_rub_krw ?? latest.krw_rub);
-  const naverRubKrwRaw=latest.naver_rub_krw;
-  const naverRubKrw=naverRubKrwRaw===null || naverRubKrwRaw===undefined ? null : Number(naverRubKrwRaw);
-  const naverDiff=naverRubKrw===null ? null : naverRubKrw-krwRub;
 
   document.getElementById("bok").innerText=fmt(bok,2);
   document.getElementById("usdRubCard").innerText=fmt(usdRub,2);
   document.getElementById("krwRub").innerText=fmt(krwRub,2);
-  document.getElementById("naverRubKrw").innerText=fmt(naverRubKrw,2);
   document.getElementById("krwToRub").innerText=intFmt(1500000/krwRub);
+
+  document.getElementById("calcGuide").innerHTML=`
+    <b>📌 오늘의 원화 환전 기준선</b><br><br>
+    현재 계산 환율(CALC): <b>1 RUB = ${fmt(krwRub,4)} KRW</b><br><br>
+    실제 환전소에서 제시하는 <b>RUB → KRW</b> 환율과 비교하세요.<br><br>
+    ▲ <b>${fmt(krwRub,4)}보다 낮으면</b> → 원화로 루블 환전 유리<br>
+    ● <b>${fmt(krwRub,4)} 부근이면</b> → 보통 수준<br>
+    ▼ <b>${fmt(krwRub,4)}보다 높으면</b> → 원화로 루블 환전 불리
+  `;
 
   const score=Number(latest.score ?? 60);
   const signal=latest.signal ?? "■ NORMAL";
   const signalBox=document.getElementById("signal");
   signalBox.innerText=`${signal} | Score: ${score}`;
-  signalBox.className=signalBadgeClass(signal,score);
+  signalBox.className=signalClass(signal,score);
 
   new Chart(document.getElementById("chart"),{
     type:"line",
     data:{
       labels:data.map(d=>d.date),
       datasets:[
-        {
-          label:"1 USD = ? RUB (CBR)",
-          data:data.map(d=>Number(d.cbr_usd_rub ?? d.usd_rub)),
-          borderColor:"orange",
-          backgroundColor:"orange",
-          tension:0.3,
-          pointRadius:4
-        },
-        {
-          label:"1 RUB = ? KRW (CALC)",
-          data:data.map(d=>Number(d.calc_rub_krw ?? d.krw_rub)),
-          borderColor:"cyan",
-          backgroundColor:"cyan",
-          yAxisID:"y1",
-          tension:0.3,
-          pointRadius:4
-        },
-        {
-          label:"1 RUB = ? KRW (NAVER)",
-          data:data.map(d=>d.naver_rub_krw==null ? null : Number(d.naver_rub_krw)),
-          borderColor:"lime",
-          backgroundColor:"lime",
-          yAxisID:"y1",
-          tension:0.3,
-          pointRadius:4,
-          spanGaps:true
-        }
+        {label:"1 USD = ? RUB (CBR)",data:data.map(d=>Number(d.cbr_usd_rub ?? d.usd_rub)),borderColor:"orange",backgroundColor:"orange",tension:0.3,pointRadius:4},
+        {label:"1 RUB = ? KRW (CALC)",data:data.map(d=>Number(d.calc_rub_krw ?? d.krw_rub)),borderColor:"cyan",backgroundColor:"cyan",yAxisID:"y1",tension:0.3,pointRadius:4}
       ]
     },
     options:{
       responsive:true,
       maintainAspectRatio:false,
       layout:{padding:{left:30,right:40,top:20,bottom:20}},
-      plugins:{
-        legend:{labels:{color:"#e5e7eb",font:{size:15}}},
-        tooltip:{enabled:true}
-      },
+      plugins:{legend:{labels:{color:"#e5e7eb",font:{size:15}}},tooltip:{enabled:true}},
       scales:{
         x:{ticks:{color:"#cbd5e1",font:{size:13}}},
         y:{position:"left",ticks:{color:"#f59e0b",font:{size:13}}},
-        y1:{position:"right",min:18,max:23,ticks:{color:"#06b6d4",font:{size:13},stepSize:1},grid:{drawOnChartArea:false}}
+        y1:{position:"right",ticks:{color:"#06b6d4",font:{size:13}},grid:{drawOnChartArea:false}}
       }
     }
   });
 
   const table=document.getElementById("table");
   table.innerHTML="";
-
   data.slice().reverse().forEach(d=>{
     const usdRubRow=Number(d.cbr_usd_rub ?? d.usd_rub);
     const krwRubRow=Number(d.calc_rub_krw ?? d.krw_rub);
-    const naverRubKrwRow=d.naver_rub_krw;
-    const rowScore=Number(d.score ?? 60);
-    const rowSignal=d.signal ?? "■ NORMAL";
-    const rowSignalClass=signalTextClass(rowSignal,rowScore);
-
     table.innerHTML+=`
       <tr>
-        <td>${String(d.date).slice(5)}</td>
+        <td>${d.date}</td>
         <td>${fmt(d.bok_usd_krw,2)}</td>
         <td>${fmt(usdRubRow,2)}</td>
         <td>${fmt(krwRubRow,2)}</td>
-        <td>${fmt(naverRubKrwRow,2)}</td>
         <td>${intFmt(1500000/krwRubRow)}</td>
         <td>${d.score ?? "-"}</td>
-        <td class="${rowSignalClass}">${rowSignal}</td>
+        <td>${d.signal ?? "-"}</td>
       </tr>`;
   });
 })
 .catch(()=>{
   document.getElementById("signal").innerText="데이터 로딩 실패";
-  document.getElementById("signal").className="signal-bad";
+  document.getElementById("signal").className="bad";
 });
 
-function calcFromUsdRub(){
-  const usdRub=Number(document.getElementById("usdRubInput").value);
+function calc(){
+  const usdRub=Number(document.getElementById("realUsdRub").value);
+  const rubKrw=Number(document.getElementById("rubKrw").value);
 
-  if(!usdRub){
-    document.getElementById("usdRubResult").innerHTML="USD → RUB 값을 입력해주세요.";
+  if(!usdRub || !rubKrw){
+    document.getElementById("result").innerHTML="값 입력 필요";
     return;
   }
-
   if(!latestGlobal){
-    document.getElementById("usdRubResult").innerHTML="기준 환율 데이터를 아직 불러오지 못했습니다.";
+    document.getElementById("result").innerHTML="기준 환율 데이터를 아직 불러오지 못했습니다.";
     return;
   }
 
+  const target=100000;
   const bokUsdKrw=Number(latestGlobal.bok_usd_krw);
-  const currentCalcRubKrw=Number(latestGlobal.calc_rub_krw ?? latestGlobal.krw_rub);
-  const equivalentRubKrw=bokUsdKrw/usdRub;
-  const diff=equivalentRubKrw-currentCalcRubKrw;
+  const krwCost=target*rubKrw;
+  const usdNeeded=target/usdRub;
+  const usdCost=usdNeeded*bokUsdKrw;
+  const diff=Math.abs(krwCost-usdCost);
+  const diffPct=diff/Math.min(krwCost,usdCost)*100;
 
-  let judgement="";
-  if(equivalentRubKrw<currentCalcRubKrw){
-    judgement="입력한 달러 환전소 조건은 현재 CALC 기준보다 원화 환산상 유리한 편입니다.";
-  }else if(equivalentRubKrw>currentCalcRubKrw){
-    judgement="입력한 달러 환전소 조건은 현재 CALC 기준보다 원화 환산상 불리한 편입니다.";
-  }else{
-    judgement="입력한 달러 환전소 조건은 현재 CALC 기준과 거의 같습니다.";
-  }
+  let decision="";
+  if(krwCost<usdCost) decision="🇰🇷 원화 경로가 유리";
+  else if(usdCost<krwCost) decision="💵 달러 경로가 유리";
+  else decision="⚖️ 두 경로가 거의 동일";
 
-  document.getElementById("usdRubResult").innerHTML=`
-    <b>입력:</b> 1 USD = ${fmt(usdRub,4)} RUB<br><br>
-
-    <b>대응 원/루블 계산식</b><br>
-    BOK USD/KRW ÷ 입력 USD/RUB<br>
-    ${fmt(bokUsdKrw,2)} ÷ ${fmt(usdRub,4)}
-    = <b>${fmt(equivalentRubKrw,4)} KRW/RUB</b><br><br>
-
-    <b>결론:</b><br>
-    1 USD = ${fmt(usdRub,4)} RUB 조건은<br>
-    <b>1 RUB = ${fmt(equivalentRubKrw,4)} KRW</b> 환전소와 같은 수준입니다.<br><br>
-
-    현재 CALC 기준: <b>1 RUB = ${fmt(currentCalcRubKrw,4)} KRW</b><br>
-    차이: <b>${fmt(diff,4)} KRW/RUB</b><br>
-    ${judgement}
-  `;
-}
-
-function calcFromRubKrw(){
-  const rubKrw=Number(document.getElementById("rubKrwInput").value);
-
-  if(!rubKrw){
-    document.getElementById("rubKrwResult").innerHTML="RUB → KRW 값을 입력해주세요.";
-    return;
-  }
-
-  if(!latestGlobal){
-    document.getElementById("rubKrwResult").innerHTML="기준 환율 데이터를 아직 불러오지 못했습니다.";
-    return;
-  }
-
-  const bokUsdKrw=Number(latestGlobal.bok_usd_krw);
-  const currentUsdRub=Number(latestGlobal.cbr_usd_rub ?? latestGlobal.usd_rub);
-  const equivalentUsdRub=bokUsdKrw/rubKrw;
-  const diff=equivalentUsdRub-currentUsdRub;
-
-  let judgement="";
-  if(equivalentUsdRub>currentUsdRub){
-    judgement="입력한 원화 환전소 조건은 현재 CBR 기준보다 달러 환산상 유리한 편입니다.";
-  }else if(equivalentUsdRub<currentUsdRub){
-    judgement="입력한 원화 환전소 조건은 현재 CBR 기준보다 달러 환산상 불리한 편입니다.";
-  }else{
-    judgement="입력한 원화 환전소 조건은 현재 CBR 기준과 거의 같습니다.";
-  }
-
-  document.getElementById("rubKrwResult").innerHTML=`
-    <b>입력:</b> 1 RUB = ${fmt(rubKrw,4)} KRW<br><br>
-
-    <b>대응 달러/루블 계산식</b><br>
-    BOK USD/KRW ÷ 입력 RUB/KRW<br>
-    ${fmt(bokUsdKrw,2)} ÷ ${fmt(rubKrw,4)}
-    = <b>${fmt(equivalentUsdRub,4)} RUB/USD</b><br><br>
-
-    <b>결론:</b><br>
-    1 RUB = ${fmt(rubKrw,4)} KRW 조건은<br>
-    <b>1 USD = ${fmt(equivalentUsdRub,4)} RUB</b> 환전소와 같은 수준입니다.<br><br>
-
-    현재 CBR 기준: <b>1 USD = ${fmt(currentUsdRub,4)} RUB</b><br>
-    차이: <b>${fmt(diff,4)} RUB/USD</b><br>
-    ${judgement}
+  document.getElementById("result").innerHTML=`
+    <b>목표:</b> ${intFmt(target)} RUB 확보<br><br>
+    <b>① 원화 경로</b><br>
+    100,000 RUB × ${fmt(rubKrw,4)} KRW/RUB<br>
+    = <b>${intFmt(krwCost)} KRW</b><br><br>
+    <b>② 달러 경로</b><br>
+    100,000 RUB ÷ ${fmt(usdRub,4)} USD/RUB<br>
+    = ${fmt(usdNeeded,2)} USD<br>
+    ${fmt(usdNeeded,2)} USD × BOK ${fmt(bokUsdKrw,2)} KRW/USD<br>
+    = <b>${intFmt(usdCost)} KRW</b><br><br>
+    <b>결론:</b> ${decision}<br>
+    <b>차이:</b> ${intFmt(diff)} KRW (${fmt(diffPct,2)}%)
   `;
 }
 </script>
