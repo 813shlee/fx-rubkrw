@@ -1,6 +1,8 @@
-import os
+import html
 import json
 import math
+import os
+import re
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
@@ -12,10 +14,17 @@ if not BOK_API_KEY:
     raise SystemExit("BOK_API_KEY environment variable is missing.")
 
 OUT = Path("rates.json")
+NAVER_URL = "https://finance.naver.com/marketindex/exchangeDetail.naver?marketindexCd=FX_RUBKRW"
 
 
 def to_float(value):
-    return float(str(value).replace(",", "."))
+    if value is None:
+        return None
+    text = html.unescape(str(value)).strip()
+    text = re.sub(r"[^0-9,\.\-]", "", text)
+    if not text:
+        return None
+    return float(text.replace(",", ""))
 
 
 def fetch_bok_usd_krw(days_back=80):
@@ -58,6 +67,90 @@ def fetch_cbr_usd_rub(iso_date):
     raise RuntimeError(f"USD not found in CBR response for {iso_date}")
 
 
+def _clean_text(raw):
+    raw = re.sub(r"<script[\s\S]*?</script>", " ", raw, flags=re.I)
+    raw = re.sub(r"<style[\s\S]*?</style>", " ", raw, flags=re.I)
+    raw = re.sub(r"<[^>]+>", " ", raw)
+    raw = html.unescape(raw)
+    return re.sub(r"\s+", " ", raw).strip()
+
+
+def _extract_after_label(text, label):
+    # 예: "현찰 사실때 22.56" / "송금 보내실때 21.33"
+    m = re.search(re.escape(label) + r"\s*([0-9][0-9,\.]*|N/A)", text)
+    if not m:
+        return None
+    return m.group(1) if m.group(1) == "N/A" else to_float(m.group(1))
+
+
+def fetch_naver_rub_krw():
+    """네이버 금융 RUB/KRW 상세 페이지에서 주요 고시환율을 가져온다.
+
+    네이버 HTML 구조가 바뀌거나 접속이 차단되어도 전체 업데이트가 실패하지 않도록
+    호출부에서 예외를 잡아 null 값을 저장한다.
+    """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+        "Referer": "https://finance.naver.com/marketindex/",
+    }
+    r = requests.get(NAVER_URL, headers=headers, timeout=25)
+    r.raise_for_status()
+    r.encoding = "euc-kr"
+    raw = r.text
+    text = _clean_text(raw)
+
+    rate = None
+    m = re.search(r"러시아\s*RUB\s*([0-9][0-9,\.]+)\s*원", text)
+    if m:
+        rate = to_float(m.group(1))
+    if rate is None:
+        m = re.search(r"no_today[\s\S]{0,500}?([0-9][0-9,\.]+)\s*</", raw, flags=re.I)
+        if m:
+            rate = to_float(m.group(1))
+
+    change = None
+    change_pct = None
+    m = re.search(r"전일대비\s*([▲▼+\-]?)\s*([0-9][0-9,\.]+)\s*([+\-]?[0-9][0-9,\.]*%)", text)
+    if m:
+        sign = -1 if m.group(1) == "▼" or m.group(1) == "-" else 1
+        change = sign * to_float(m.group(2))
+        change_pct = m.group(3)
+
+    time_text = None
+    m = re.search(r"(20\d{2}\.\d{2}\.\d{2}\s+\d{2}:\d{2})", text)
+    if m:
+        time_text = m.group(1)
+
+    return {
+        "naver_rub_krw": rate,
+        "naver_change": change,
+        "naver_change_pct": change_pct,
+        "naver_time": time_text,
+        "naver_cash_buy": _extract_after_label(text, "현찰 사실때"),
+        "naver_cash_sell": _extract_after_label(text, "현찰 파실때"),
+        "naver_send": _extract_after_label(text, "송금 보내실때"),
+        "naver_receive": _extract_after_label(text, "송금 받으실때"),
+        "naver_tc_buy": _extract_after_label(text, "T/C 사실때"),
+        "naver_check_sell": _extract_after_label(text, "외화수표 파실때"),
+    }
+
+
+def empty_naver_data():
+    return {
+        "naver_rub_krw": None,
+        "naver_change": None,
+        "naver_change_pct": None,
+        "naver_time": None,
+        "naver_cash_buy": None,
+        "naver_cash_sell": None,
+        "naver_send": None,
+        "naver_receive": None,
+        "naver_tc_buy": None,
+        "naver_check_sell": None,
+    }
+
+
 def score_system(calc_series, current):
     recent = calc_series[-10:]
     avg = sum(recent) / len(recent)
@@ -92,6 +185,13 @@ def main():
     bok = fetch_bok_usd_krw(days_back=80)
     recent_dates = [(today - timedelta(days=i)).isoformat() for i in range(9, -1, -1)]
 
+    try:
+        naver = fetch_naver_rub_krw()
+        print("Fetched Naver RUB/KRW data.")
+    except Exception as exc:
+        print(f"Warning: failed to fetch Naver RUB/KRW data: {exc}")
+        naver = empty_naver_data()
+
     rows = []
     calc_series = []
 
@@ -100,7 +200,7 @@ def main():
         cbr_usd_rub = fetch_cbr_usd_rub(dt)
         calc_rub_krw = bok_usd_krw / cbr_usd_rub
         calc_series.append(calc_rub_krw)
-        rows.append({
+        row = {
             "date": dt,
             "bok_source_date": bok_source_date,
             "bok_usd_krw": round(bok_usd_krw, 4),
@@ -109,7 +209,10 @@ def main():
             "krw_1_5m_to_rub": round(1500000 / calc_rub_krw),
             "usd_rub": round(cbr_usd_rub, 6),
             "krw_rub": round(calc_rub_krw, 6),
-        })
+        }
+        # 네이버는 현재 상세 고시값이므로 최신 행에만 표시하고, 그래프는 최신점만 표시합니다.
+        row.update(naver if dt == recent_dates[-1] else empty_naver_data())
+        rows.append(row)
 
     for i, row in enumerate(rows):
         s = score_system(calc_series[:i + 1], row["calc_rub_krw"])
