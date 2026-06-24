@@ -189,7 +189,7 @@ function renderNaverInfo(latest){
     <div class="naver-head">
       <div>
         <div class="naver-title">🇷🇺 네이버 러시아 루블 환율</div>
-        <div class="naver-rate">${displayNaverRate(naverRate)}</div>
+        <div class="naver-rate">${fmt(naverRate,2)} 원</div>
         <div class="naver-change">${changeText}</div>
       </div>
       <div class="naver-time">${latest.naver_time ?? ""}</div>
