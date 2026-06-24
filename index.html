@@ -167,7 +167,7 @@ function renderNaverInfo(latest){
     <div class="naver-head">
       <div>
         <div class="naver-title">🇷🇺 네이버 러시아 루블 환율</div>
-        <div class="naver-rate">${fmt(naverRate,2)} 원</div>
+        <div class="naver-rate">${displayNaverRate(naverRate)}</div>
         <div class="naver-change">${changeText}</div>
       </div>
       <div class="naver-time">${latest.naver_time ?? ""}</div>
@@ -216,8 +216,7 @@ fetch("rates.json?v="+Date.now())
       labels:data.map(d=>d.date),
       datasets:[
         {label:"1 USD = ? RUB (CBR)",data:data.map(d=>Number(d.cbr_usd_rub ?? d.usd_rub)),borderColor:"orange",backgroundColor:"orange",tension:0.3,pointRadius:4},
-        {label:"1 RUB = ? KRW (CALC)",data:data.map(d=>Number(d.calc_rub_krw ?? d.krw_rub)),borderColor:"cyan",backgroundColor:"cyan",yAxisID:"y1",tension:0.3,pointRadius:4},
-        {label:"1 RUB = ? KRW (NAVER)",data:data.map(d=>d.naver_rub_krw==null ? null : Number(d.naver_rub_krw)),borderColor:"lime",backgroundColor:"lime",yAxisID:"y1",tension:0.3,pointRadius:4,spanGaps:true}
+        {label:"1 RUB = ? KRW (CALC)",data:data.map(d=>Number(d.calc_rub_krw ?? d.krw_rub)),borderColor:"cyan",backgroundColor:"cyan",yAxisID:"y1",tension:0.3,pointRadius:4}
       ]
     },
     options:{
