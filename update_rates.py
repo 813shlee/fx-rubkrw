@@ -348,9 +348,33 @@ def main():
             "usd_rub": round(cbr_usd_rub, 6),
             "krw_rub": round(calc_rub_krw, 6),
         }
-        row.update(naver if dt == recent_dates[-1] else empty_naver_data())
-        rows.append(row)
+        
+    # 기존 rates.json에 저장된 네이버 값 유지
+    old_row = next((r for r in existing_rows if r.get("date") == dt), None)
 
+    if old_row:
+        for key in (
+            "naver_rub_krw",
+            "naver_change",
+            "naver_change_pct",
+            "naver_time",
+            "naver_cash_buy",
+            "naver_cash_sell",
+            "naver_send",
+            "naver_receive",
+            "naver_tc_buy",
+            "naver_check_sell",
+        ):
+            if old_row.get(key) not in (None, ""):
+                row[key] = old_row.get(key)
+
+    # 오늘 날짜만 새 네이버 값으로 갱신
+    if dt == recent_dates[-1]:
+        for key, value in naver.items():
+            if value not in (None, ""):
+                row[key] = value
+    rows.append(row)
+        
     for i, row in enumerate(rows):
         s = score_system(calc_series[:i + 1], row["calc_rub_krw"])
         row["score"] = s
